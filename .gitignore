@@ -1,0 +1,42 @@
+# Claude Code
+.claude/
+
+# SpecKit
+.specify/
+
+# Documentation
+doc/
+docs/
+
+# Specs
+specs/
+
+# Ruby / Bundler
+.bundle/
+vendor/bundle/
+Gemfile.lock
+*.gem
+pkg/
+
+# Testing
+coverage/
+spec/cassettes/
+
+# Logs / Temp
+log/
+tmp/
+*.log
+
+# Universal
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp
+.vscode/
+.idea/
+
+# Environment
+.env*
+
+# Tasks
+tasks/
