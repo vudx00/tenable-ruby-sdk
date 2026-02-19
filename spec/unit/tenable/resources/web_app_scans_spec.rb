@@ -258,4 +258,103 @@ RSpec.describe Tenable::Resources::WebAppScans do
       end
     end
   end
+
+  describe '#get_config' do
+    let(:config_id) { 'cfg-abc-123' }
+    let(:response_body) do
+      { 'config_id' => config_id, 'name' => 'My Config', 'target' => 'https://example.com' }
+    end
+
+    before do
+      stub_request(:get, "https://cloud.tenable.com/was/v2/configs/#{config_id}")
+        .to_return(status: 200, body: JSON.generate(response_body), headers: { 'Content-Type' => 'application/json' })
+    end
+
+    it 'sends a GET request to /was/v2/configs/{config_id}' do
+      resource.get_config(config_id)
+
+      expect(WebMock).to have_requested(:get, "https://cloud.tenable.com/was/v2/configs/#{config_id}")
+    end
+
+    it 'returns configuration data' do
+      result = resource.get_config(config_id)
+
+      expect(result['config_id']).to eq(config_id)
+      expect(result['name']).to eq('My Config')
+    end
+  end
+
+  describe '#update_config' do
+    let(:config_id) { 'cfg-abc-123' }
+    let(:params) { { 'name' => 'Updated Config', 'target' => 'https://new.example.com' } }
+    let(:response_body) { { 'config_id' => config_id, 'name' => 'Updated Config' } }
+
+    before do
+      stub_request(:put, "https://cloud.tenable.com/was/v2/configs/#{config_id}")
+        .with(body: JSON.generate(params), headers: { 'Content-Type' => 'application/json' })
+        .to_return(status: 200, body: JSON.generate(response_body), headers: { 'Content-Type' => 'application/json' })
+    end
+
+    it 'sends a PUT request to /was/v2/configs/{config_id}' do
+      resource.update_config(config_id, params)
+
+      expect(WebMock).to have_requested(:put, "https://cloud.tenable.com/was/v2/configs/#{config_id}")
+        .with(body: JSON.generate(params))
+    end
+
+    it 'returns the updated configuration' do
+      result = resource.update_config(config_id, params)
+
+      expect(result['name']).to eq('Updated Config')
+    end
+  end
+
+  describe '#delete_config' do
+    let(:config_id) { 'cfg-abc-123' }
+
+    before do
+      stub_request(:delete, "https://cloud.tenable.com/was/v2/configs/#{config_id}")
+        .to_return(status: 200, body: '', headers: { 'Content-Type' => 'application/json' })
+    end
+
+    it 'sends a DELETE request to /was/v2/configs/{config_id}' do
+      resource.delete_config(config_id)
+
+      expect(WebMock).to have_requested(:delete, "https://cloud.tenable.com/was/v2/configs/#{config_id}")
+    end
+
+    it 'returns nil for empty response' do
+      result = resource.delete_config(config_id)
+
+      expect(result).to be_nil
+    end
+  end
+
+  describe '#search_configs' do
+    let(:response_body) do
+      {
+        'items' => [{ 'config_id' => 'cfg-abc-123', 'name' => 'My Config' }],
+        'pagination' => { 'total' => 1, 'offset' => 0, 'limit' => 50 }
+      }
+    end
+
+    before do
+      stub_request(:post, 'https://cloud.tenable.com/was/v2/configs/search')
+        .with(headers: { 'Content-Type' => 'application/json' })
+        .to_return(status: 200, body: JSON.generate(response_body), headers: { 'Content-Type' => 'application/json' })
+    end
+
+    it 'sends a POST request to /was/v2/configs/search' do
+      resource.search_configs(filter: { name: 'My Config' })
+
+      expect(WebMock).to have_requested(:post, 'https://cloud.tenable.com/was/v2/configs/search')
+    end
+
+    it 'returns search results with items and pagination' do
+      result = resource.search_configs(filter: { name: 'My Config' })
+
+      expect(result['items']).to be_an(Array)
+      expect(result['pagination']['total']).to eq(1)
+    end
+  end
 end
