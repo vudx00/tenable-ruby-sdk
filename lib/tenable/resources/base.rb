@@ -43,6 +43,42 @@ module Tenable
         handle_response(response)
       end
 
+      # Performs a PUT request with a JSON body.
+      #
+      # @param path [String] the API endpoint path
+      # @param body [Hash, nil] request body (serialized to JSON)
+      # @return [Hash, Array, nil] parsed JSON response
+      def put(path, body = nil)
+        response = @connection.faraday.put(path) do |req|
+          req.headers['Content-Type'] = 'application/json'
+          req.body = JSON.generate(body) if body
+        end
+        handle_response(response)
+      end
+
+      # Performs a PATCH request with a JSON body.
+      #
+      # @param path [String] the API endpoint path
+      # @param body [Hash, nil] request body (serialized to JSON)
+      # @return [Hash, Array, nil] parsed JSON response
+      def patch(path, body = nil)
+        response = @connection.faraday.patch(path) do |req|
+          req.headers['Content-Type'] = 'application/json'
+          req.body = JSON.generate(body) if body
+        end
+        handle_response(response)
+      end
+
+      # Performs a DELETE request.
+      #
+      # @param path [String] the API endpoint path
+      # @param params [Hash] query parameters
+      # @return [Hash, Array, nil] parsed JSON response
+      def delete(path, params = {})
+        response = @connection.faraday.delete(path, params)
+        handle_response(response)
+      end
+
       def handle_response(response)
         case response.status
         when 200..299
