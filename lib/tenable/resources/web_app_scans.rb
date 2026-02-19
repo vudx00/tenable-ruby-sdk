@@ -146,6 +146,55 @@ module Tenable
       def vulnerability_details(vuln_id)
         get("/was/v2/vulns/#{vuln_id}")
       end
+
+      # Initiates an export for a specific WAS scan.
+      #
+      # @param scan_id [String] the scan ID
+      # @return [Hash] export initiation response
+      def export_scan(scan_id)
+        put("/was/v2/scans/#{scan_id}/export")
+      end
+
+      # Downloads a completed WAS scan export as raw binary data.
+      #
+      # @param scan_id [String] the scan ID
+      # @return [String] raw binary content of the export
+      def download_scan_export(scan_id)
+        get_raw("/was/v2/scans/#{scan_id}/export/download")
+      end
+
+      # Initiates a bulk WAS findings export.
+      #
+      # @param body [Hash] export request parameters
+      # @return [Hash] response containing the export UUID
+      def export_findings(body = {})
+        post('/was/v1/export/vulns', body)
+      end
+
+      # Retrieves the status of a WAS findings export.
+      #
+      # @param export_uuid [String] the export UUID
+      # @return [Hash] status data
+      def export_findings_status(export_uuid)
+        get("/was/v1/export/vulns/#{export_uuid}/status")
+      end
+
+      # Downloads a single chunk of WAS findings export data.
+      #
+      # @param export_uuid [String] the export UUID
+      # @param chunk_id [Integer] the chunk identifier
+      # @return [Array<Hash>] array of finding records
+      def export_findings_chunk(export_uuid, chunk_id)
+        get("/was/v1/export/vulns/#{export_uuid}/chunks/#{chunk_id}")
+      end
+
+      # Cancels an in-progress WAS findings export.
+      #
+      # @param export_uuid [String] the export UUID
+      # @return [Hash] cancellation response
+      def export_findings_cancel(export_uuid)
+        post("/was/v1/export/vulns/#{export_uuid}/cancel")
+      end
     end
   end
 end

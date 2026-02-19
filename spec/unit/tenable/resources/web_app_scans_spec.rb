@@ -507,4 +507,150 @@ RSpec.describe Tenable::Resources::WebAppScans do
       expect(result['name']).to eq('SQL Injection')
     end
   end
+
+  describe '#export_scan' do
+    let(:scan_id) { 'scan-xyz-789' }
+    let(:response_body) { { 'scan_id' => scan_id, 'status' => 'exporting' } }
+
+    before do
+      stub_request(:put, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/export")
+        .to_return(status: 200, body: JSON.generate(response_body), headers: { 'Content-Type' => 'application/json' })
+    end
+
+    it 'sends a PUT request to /was/v2/scans/{scan_id}/export' do
+      resource.export_scan(scan_id)
+
+      expect(WebMock).to have_requested(:put, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/export")
+    end
+
+    it 'returns the export initiation response' do
+      result = resource.export_scan(scan_id)
+
+      expect(result['status']).to eq('exporting')
+    end
+  end
+
+  describe '#download_scan_export' do
+    let(:scan_id) { 'scan-xyz-789' }
+    let(:binary_content) { "\x50\x4B\x03\x04 fake zip content" }
+
+    before do
+      stub_request(:get, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/export/download")
+        .to_return(status: 200, body: binary_content, headers: { 'Content-Type' => 'application/octet-stream' })
+    end
+
+    it 'sends a GET request to the download endpoint' do
+      resource.download_scan_export(scan_id)
+
+      expect(WebMock).to have_requested(:get, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/export/download")
+    end
+
+    it 'returns raw binary content' do
+      result = resource.download_scan_export(scan_id)
+
+      expect(result).to be_a(String)
+      expect(result).to eq(binary_content)
+    end
+  end
+
+  describe '#export_findings' do
+    let(:export_uuid) { 'exp-abc-123' }
+
+    before do
+      stub_request(:post, 'https://cloud.tenable.com/was/v1/export/vulns')
+        .with(headers: { 'Content-Type' => 'application/json' })
+        .to_return(
+          status: 200,
+          body: JSON.generate({ 'export_uuid' => export_uuid }),
+          headers: { 'Content-Type' => 'application/json' }
+        )
+    end
+
+    it 'sends a POST request to /was/v1/export/vulns' do
+      resource.export_findings(severity: 'high')
+
+      expect(WebMock).to have_requested(:post, 'https://cloud.tenable.com/was/v1/export/vulns')
+    end
+
+    it 'returns the export UUID' do
+      result = resource.export_findings(severity: 'high')
+
+      expect(result['export_uuid']).to eq(export_uuid)
+    end
+  end
+
+  describe '#export_findings_status' do
+    let(:export_uuid) { 'exp-abc-123' }
+
+    before do
+      stub_request(:get, "https://cloud.tenable.com/was/v1/export/vulns/#{export_uuid}/status")
+        .to_return(
+          status: 200,
+          body: JSON.generate({ 'status' => 'FINISHED', 'chunks_available' => [0] }),
+          headers: { 'Content-Type' => 'application/json' }
+        )
+    end
+
+    it 'sends a GET request to the status endpoint' do
+      resource.export_findings_status(export_uuid)
+
+      expect(WebMock).to have_requested(:get, "https://cloud.tenable.com/was/v1/export/vulns/#{export_uuid}/status")
+    end
+
+    it 'returns status data' do
+      result = resource.export_findings_status(export_uuid)
+
+      expect(result['status']).to eq('FINISHED')
+    end
+  end
+
+  describe '#export_findings_chunk' do
+    let(:export_uuid) { 'exp-abc-123' }
+    let(:chunk_data) do
+      [{ 'vuln_id' => 'v-001', 'name' => 'SQL Injection' }]
+    end
+
+    before do
+      stub_request(:get, "https://cloud.tenable.com/was/v1/export/vulns/#{export_uuid}/chunks/0")
+        .to_return(status: 200, body: JSON.generate(chunk_data), headers: { 'Content-Type' => 'application/json' })
+    end
+
+    it 'sends a GET request to the chunk endpoint' do
+      resource.export_findings_chunk(export_uuid, 0)
+
+      expect(WebMock).to have_requested(:get, "https://cloud.tenable.com/was/v1/export/vulns/#{export_uuid}/chunks/0")
+    end
+
+    it 'returns an array of finding records' do
+      result = resource.export_findings_chunk(export_uuid, 0)
+
+      expect(result).to be_an(Array)
+      expect(result.first['vuln_id']).to eq('v-001')
+    end
+  end
+
+  describe '#export_findings_cancel' do
+    let(:export_uuid) { 'exp-abc-123' }
+
+    before do
+      stub_request(:post, "https://cloud.tenable.com/was/v1/export/vulns/#{export_uuid}/cancel")
+        .to_return(
+          status: 200,
+          body: JSON.generate({ 'status' => 'CANCELLED' }),
+          headers: { 'Content-Type' => 'application/json' }
+        )
+    end
+
+    it 'sends a POST request to the cancel endpoint' do
+      resource.export_findings_cancel(export_uuid)
+
+      expect(WebMock).to have_requested(:post, "https://cloud.tenable.com/was/v1/export/vulns/#{export_uuid}/cancel")
+    end
+
+    it 'returns the cancellation response' do
+      result = resource.export_findings_cancel(export_uuid)
+
+      expect(result['status']).to eq('CANCELLED')
+    end
+  end
 end
