@@ -2,10 +2,33 @@
 
 module Tenable
   module Models
+    # Represents a Tenable.io scan.
     class Scan
-      attr_reader :id, :uuid, :name, :status, :folder_id, :type,
-                  :creation_date, :last_modification_date
+      # @return [Integer, nil] the scan ID
+      attr_reader :id
 
+      # @return [String, nil] the scan UUID
+      attr_reader :uuid
+
+      # @return [String, nil] the scan name
+      attr_reader :name
+
+      # @return [String, nil] current scan status
+      attr_reader :status
+
+      # @return [Integer, nil] the folder ID containing this scan
+      attr_reader :folder_id
+
+      # @return [String, nil] the scan type
+      attr_reader :type
+
+      # @return [Integer, nil] Unix timestamp of creation
+      attr_reader :creation_date
+
+      # @return [Integer, nil] Unix timestamp of last modification
+      attr_reader :last_modification_date
+
+      # @param data [Hash] raw API response hash
       def initialize(data)
         @id = data['id']
         @uuid = data['uuid']

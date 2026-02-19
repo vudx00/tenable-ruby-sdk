@@ -57,9 +57,9 @@ RSpec.describe Tenable::Resources::Exports do
         .to_return(
           status: 200,
           body: JSON.generate({
-            'status' => 'FINISHED',
-            'chunks_available' => [0, 1, 2]
-          }),
+                                'status' => 'FINISHED',
+                                'chunks_available' => [0, 1, 2]
+                              }),
           headers: { 'Content-Type' => 'application/json' }
         )
     end
@@ -91,12 +91,12 @@ RSpec.describe Tenable::Resources::Exports do
       [
         {
           'asset' => { 'uuid' => 'asset-001' },
-          'plugin' => { 'id' => 19506, 'name' => 'Nessus Scan Information' },
+          'plugin' => { 'id' => 19_506, 'name' => 'Nessus Scan Information' },
           'severity' => 'info'
         },
         {
           'asset' => { 'uuid' => 'asset-002' },
-          'plugin' => { 'id' => 10863, 'name' => 'SSL Certificate Information' },
+          'plugin' => { 'id' => 10_863, 'name' => 'SSL Certificate Information' },
           'severity' => 'medium'
         }
       ]
@@ -122,7 +122,7 @@ RSpec.describe Tenable::Resources::Exports do
       result = resource.download_chunk(export_uuid, chunk_id)
 
       vuln = result.first
-      expect(vuln['plugin']['id']).to eq(19506)
+      expect(vuln['plugin']['id']).to eq(19_506)
       expect(vuln['severity']).to eq('info')
     end
 
@@ -140,7 +140,7 @@ RSpec.describe Tenable::Resources::Exports do
       [
         {
           'asset' => { 'uuid' => 'asset-001' },
-          'plugin' => { 'id' => 19506, 'name' => 'Nessus Scan Information' },
+          'plugin' => { 'id' => 19_506, 'name' => 'Nessus Scan Information' },
           'severity' => 'info'
         }
       ]
@@ -150,12 +150,12 @@ RSpec.describe Tenable::Resources::Exports do
       [
         {
           'asset' => { 'uuid' => 'asset-002' },
-          'plugin' => { 'id' => 10863, 'name' => 'SSL Certificate Information' },
+          'plugin' => { 'id' => 10_863, 'name' => 'SSL Certificate Information' },
           'severity' => 'medium'
         },
         {
           'asset' => { 'uuid' => 'asset-003' },
-          'plugin' => { 'id' => 12345, 'name' => 'Critical Vulnerability' },
+          'plugin' => { 'id' => 12_345, 'name' => 'Critical Vulnerability' },
           'severity' => 'critical'
         }
       ]
@@ -166,9 +166,9 @@ RSpec.describe Tenable::Resources::Exports do
         .to_return(
           status: 200,
           body: JSON.generate({
-            'status' => 'FINISHED',
-            'chunks_available' => [0, 1]
-          }),
+                                'status' => 'FINISHED',
+                                'chunks_available' => [0, 1]
+                              }),
           headers: { 'Content-Type' => 'application/json' }
         )
 
@@ -198,7 +198,7 @@ RSpec.describe Tenable::Resources::Exports do
       plugin_ids = []
       resource.each(export_uuid) { |v| plugin_ids << v['plugin']['id'] }
 
-      expect(plugin_ids).to eq([19506, 10863, 12345])
+      expect(plugin_ids).to eq([19_506, 10_863, 12_345])
     end
 
     it 'fetches all available chunks' do
@@ -220,9 +220,9 @@ RSpec.describe Tenable::Resources::Exports do
         .to_return(
           status: 200,
           body: JSON.generate({
-            'status' => 'PROCESSING',
-            'chunks_available' => []
-          }),
+                                'status' => 'PROCESSING',
+                                'chunks_available' => []
+                              }),
           headers: { 'Content-Type' => 'application/json' }
         )
     end

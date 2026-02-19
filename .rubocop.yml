@@ -42,3 +42,20 @@ RSpec/MultipleDescribes:
 
 RSpec/AnyInstance:
   Enabled: false
+
+RSpec/MultipleMemoizedHelpers:
+  Enabled: false
+
+RSpec/DescribeClass:
+  Exclude:
+    - spec/contract/**/*
+    - spec/integration/**/*
+
+RSpec/IteratedExpectation:
+  Enabled: false
+
+RSpec/ExpectActual:
+  Enabled: false
+
+RSpec/ContextWording:
+  Enabled: false

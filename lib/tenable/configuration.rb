@@ -1,8 +1,31 @@
 # frozen_string_literal: true
 
 module Tenable
+  # Holds and validates all configuration options for the Tenable client.
+  #
+  # Configuration values can be passed directly or read from environment
+  # variables (+TENABLE_ACCESS_KEY+, +TENABLE_SECRET_KEY+).
   class Configuration
-    attr_reader :access_key, :secret_key, :base_url, :timeout, :open_timeout, :max_retries, :logger
+    # @return [String] the API access key
+    attr_reader :access_key
+
+    # @return [String] the API secret key
+    attr_reader :secret_key
+
+    # @return [String] the API base URL
+    attr_reader :base_url
+
+    # @return [Integer] the request timeout in seconds
+    attr_reader :timeout
+
+    # @return [Integer] the connection open timeout in seconds
+    attr_reader :open_timeout
+
+    # @return [Integer] the maximum number of retry attempts
+    attr_reader :max_retries
+
+    # @return [Logger, nil] optional logger instance
+    attr_reader :logger
 
     DEFAULTS = {
       base_url: 'https://cloud.tenable.com',
@@ -11,6 +34,16 @@ module Tenable
       max_retries: 3
     }.freeze
 
+    # Creates a new Configuration instance.
+    #
+    # @param access_key [String, nil] API access key (falls back to +TENABLE_ACCESS_KEY+ env var)
+    # @param secret_key [String, nil] API secret key (falls back to +TENABLE_SECRET_KEY+ env var)
+    # @param base_url [String, nil] API base URL (default: https://cloud.tenable.com)
+    # @param timeout [Integer, nil] request timeout in seconds (default: 30)
+    # @param open_timeout [Integer, nil] connection open timeout in seconds (default: 10)
+    # @param max_retries [Integer, nil] max retry attempts, 0-10 (default: 3)
+    # @param logger [Logger, nil] optional logger for request/response logging
+    # @raise [ArgumentError] if credentials are missing, base_url is invalid, or numeric values are out of range
     def initialize(access_key: nil, secret_key: nil, base_url: nil, timeout: nil, open_timeout: nil, max_retries: nil,
                    logger: nil)
       @access_key = access_key || ENV.fetch('TENABLE_ACCESS_KEY', nil)

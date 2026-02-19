@@ -2,18 +2,39 @@
 
 module Tenable
   module Resources
+    # Base class for all API resource classes. Provides HTTP helpers
+    # and response handling with automatic error mapping.
     class Base
+      # @param connection [Connection] an initialized API connection
       def initialize(connection)
         @connection = connection
       end
 
       private
 
+      # Performs a GET request.
+      #
+      # @param path [String] the API endpoint path
+      # @param params [Hash] query parameters
+      # @return [Hash, Array, nil] parsed JSON response
+      # @raise [AuthenticationError] on 401 responses
+      # @raise [RateLimitError] on 429 responses
+      # @raise [ApiError] on other non-2xx responses
+      # @raise [ParseError] if the response is not valid JSON
       def get(path, params = {})
         response = @connection.faraday.get(path, params)
         handle_response(response)
       end
 
+      # Performs a POST request with a JSON body.
+      #
+      # @param path [String] the API endpoint path
+      # @param body [Hash, nil] request body (serialized to JSON)
+      # @return [Hash, Array, nil] parsed JSON response
+      # @raise [AuthenticationError] on 401 responses
+      # @raise [RateLimitError] on 429 responses
+      # @raise [ApiError] on other non-2xx responses
+      # @raise [ParseError] if the response is not valid JSON
       def post(path, body = nil)
         response = @connection.faraday.post(path) do |req|
           req.headers['Content-Type'] = 'application/json'

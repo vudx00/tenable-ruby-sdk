@@ -15,13 +15,13 @@ RSpec.describe 'Export workflow', :integration do
     [
       {
         'asset' => { 'uuid' => 'asset-001', 'hostname' => 'web-01', 'ipv4' => '10.0.1.1' },
-        'plugin' => { 'id' => 10001, 'name' => 'CVE-2025-0001', 'family' => 'General' },
+        'plugin' => { 'id' => 10_001, 'name' => 'CVE-2025-0001', 'family' => 'General' },
         'severity' => 'critical',
         'state' => 'open'
       },
       {
         'asset' => { 'uuid' => 'asset-002', 'hostname' => 'db-01', 'ipv4' => '10.0.2.1' },
-        'plugin' => { 'id' => 10002, 'name' => 'CVE-2025-0002', 'family' => 'Databases' },
+        'plugin' => { 'id' => 10_002, 'name' => 'CVE-2025-0002', 'family' => 'Databases' },
         'severity' => 'high',
         'state' => 'open'
       }
@@ -32,7 +32,7 @@ RSpec.describe 'Export workflow', :integration do
     [
       {
         'asset' => { 'uuid' => 'asset-003', 'hostname' => 'app-01', 'ipv4' => '10.0.3.1' },
-        'plugin' => { 'id' => 10003, 'name' => 'CVE-2025-0003', 'family' => 'Web Servers' },
+        'plugin' => { 'id' => 10_003, 'name' => 'CVE-2025-0003', 'family' => 'Web Servers' },
         'severity' => 'medium',
         'state' => 'open'
       }
@@ -88,20 +88,20 @@ RSpec.describe 'Export workflow', :integration do
 
     it 'polls status until FINISHED and retrieves chunk IDs' do
       # First poll returns PROCESSING
-      status1 = client.exports.send(:get,"/vulns/export/#{export_uuid}/status")
+      status1 = client.exports.send(:get, "/vulns/export/#{export_uuid}/status")
       expect(status1['status']).to eq('PROCESSING')
       expect(status1['chunks_available']).to be_empty
 
       # Second poll returns FINISHED with chunks
-      status2 = client.exports.send(:get,"/vulns/export/#{export_uuid}/status")
+      status2 = client.exports.send(:get, "/vulns/export/#{export_uuid}/status")
       expect(status2['status']).to eq('FINISHED')
       expect(status2['chunks_available']).to eq([0, 1])
       expect(status2['chunks_failed']).to be_empty
     end
 
     it 'downloads chunks and iterates over all vulnerability records' do
-      chunk0 = client.exports.send(:get,"/vulns/export/#{export_uuid}/chunks/0")
-      chunk1 = client.exports.send(:get,"/vulns/export/#{export_uuid}/chunks/1")
+      chunk0 = client.exports.send(:get, "/vulns/export/#{export_uuid}/chunks/0")
+      chunk1 = client.exports.send(:get, "/vulns/export/#{export_uuid}/chunks/1")
 
       all_results = chunk0 + chunk1
 
@@ -118,8 +118,8 @@ RSpec.describe 'Export workflow', :integration do
     end
 
     it 'collects all hostnames across chunks' do
-      chunk0 = client.exports.send(:get,"/vulns/export/#{export_uuid}/chunks/0")
-      chunk1 = client.exports.send(:get,"/vulns/export/#{export_uuid}/chunks/1")
+      chunk0 = client.exports.send(:get, "/vulns/export/#{export_uuid}/chunks/0")
+      chunk1 = client.exports.send(:get, "/vulns/export/#{export_uuid}/chunks/1")
 
       hostnames = (chunk0 + chunk1).map { |r| r['asset']['hostname'] }
 
@@ -150,7 +150,7 @@ RSpec.describe 'Export workflow', :integration do
     end
 
     it 'raises TimeoutError with the export UUID when polling exceeds the limit' do
-      export_response = client.exports.send(:post,'/vulns/export', { 'num_assets' => 100 })
+      export_response = client.exports.send(:post, '/vulns/export', { 'num_assets' => 100 })
       uuid = export_response['export_uuid']
 
       max_polls = 3
@@ -158,7 +158,7 @@ RSpec.describe 'Export workflow', :integration do
 
       expect do
         loop do
-          status = client.exports.send(:get,"/vulns/export/#{uuid}/status")
+          status = client.exports.send(:get, "/vulns/export/#{uuid}/status")
           break if status['status'] == 'FINISHED'
 
           polls += 1
@@ -168,7 +168,7 @@ RSpec.describe 'Export workflow', :integration do
     end
 
     it 'includes the UUID in the TimeoutError message for debugging' do
-      export_response = client.exports.send(:post,'/vulns/export', { 'num_assets' => 100 })
+      export_response = client.exports.send(:post, '/vulns/export', { 'num_assets' => 100 })
       uuid = export_response['export_uuid']
 
       begin

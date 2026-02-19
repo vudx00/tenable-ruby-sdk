@@ -20,7 +20,7 @@ RSpec.describe 'Export API Contract' do
       {
         'num_assets' => 500,
         'filters' => {
-          'severity' => ['critical', 'high']
+          'severity' => %w[critical high]
         }
       }
     end
@@ -112,9 +112,7 @@ RSpec.describe 'Export API Contract' do
         req.headers['X-ApiKeys'] = valid_api_keys_header
       end
 
-      response.body['chunks_available'].each do |chunk_id|
-        expect(chunk_id).to be_a(Integer)
-      end
+      expect(response.body['chunks_available']).to all(be_a(Integer))
     end
   end
 
@@ -131,7 +129,7 @@ RSpec.describe 'Export API Contract' do
             'operating_system' => ['Linux']
           },
           'plugin' => {
-            'id' => 12345,
+            'id' => 12_345,
             'name' => 'SSL Certificate Expired',
             'family' => 'General'
           },
@@ -148,7 +146,7 @@ RSpec.describe 'Export API Contract' do
             'operating_system' => ['Windows Server 2022']
           },
           'plugin' => {
-            'id' => 67890,
+            'id' => 67_890,
             'name' => 'Remote Code Execution',
             'family' => 'Windows'
           },

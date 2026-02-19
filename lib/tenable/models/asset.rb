@@ -2,9 +2,27 @@
 
 module Tenable
   module Models
+    # Represents an asset (host/device) from the Tenable.io API.
     class Asset
-      attr_reader :uuid, :hostname, :ipv4, :operating_system, :fqdn, :netbios_name
+      # @return [String, nil] the asset UUID
+      attr_reader :uuid
 
+      # @return [String, nil] the hostname
+      attr_reader :hostname
+
+      # @return [String, nil] the IPv4 address
+      attr_reader :ipv4
+
+      # @return [Array<String>] operating systems detected on the asset
+      attr_reader :operating_system
+
+      # @return [Array<String>] fully qualified domain names
+      attr_reader :fqdn
+
+      # @return [String, nil] the NetBIOS name
+      attr_reader :netbios_name
+
+      # @param data [Hash] raw API response hash
       def initialize(data)
         @uuid = data['uuid']
         @hostname = data['hostname']

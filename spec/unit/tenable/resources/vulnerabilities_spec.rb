@@ -27,14 +27,14 @@ RSpec.describe Tenable::Resources::Vulnerabilities do
             {
               'count' => 5,
               'plugin_family' => 'General',
-              'plugin_id' => 19506,
+              'plugin_id' => 19_506,
               'plugin_name' => 'Nessus Scan Information',
               'severity' => 0
             },
             {
               'count' => 3,
               'plugin_family' => 'Web Servers',
-              'plugin_id' => 10863,
+              'plugin_id' => 10_863,
               'plugin_name' => 'SSL Certificate Information',
               'severity' => 2
             }
@@ -68,7 +68,7 @@ RSpec.describe Tenable::Resources::Vulnerabilities do
         result = resource.list
 
         vuln = result['vulnerabilities'].first
-        expect(vuln['plugin_id']).to eq(19506)
+        expect(vuln['plugin_id']).to eq(19_506)
         expect(vuln['plugin_name']).to eq('Nessus Scan Information')
         expect(vuln['severity']).to eq(0)
       end
@@ -77,20 +77,20 @@ RSpec.describe Tenable::Resources::Vulnerabilities do
     context 'with severity filter' do
       before do
         stub_request(:get, 'https://cloud.tenable.com/workbenches/vulnerabilities')
-          .with(query: { 'severity' => ['critical', 'high'] })
+          .with(query: { 'severity' => %w[critical high] })
           .to_return(
             status: 200,
             body: JSON.generate({
-              'vulnerabilities' => [
-                {
-                  'count' => 1,
-                  'plugin_family' => 'General',
-                  'plugin_id' => 12345,
-                  'plugin_name' => 'Critical Vulnerability',
-                  'severity' => 4
-                }
-              ]
-            }),
+                                  'vulnerabilities' => [
+                                    {
+                                      'count' => 1,
+                                      'plugin_family' => 'General',
+                                      'plugin_id' => 12_345,
+                                      'plugin_name' => 'Critical Vulnerability',
+                                      'severity' => 4
+                                    }
+                                  ]
+                                }),
             headers: { 'Content-Type' => 'application/json' }
           )
       end

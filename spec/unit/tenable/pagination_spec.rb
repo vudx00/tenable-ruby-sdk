@@ -15,7 +15,7 @@ RSpec.describe Tenable::Pagination do
     it 'auto-fetches next page when offset < total' do
       call_count = 0
 
-      paginator = described_class.new(limit: 2) do |offset, limit|
+      paginator = described_class.new(limit: 2) do |offset, _limit|
         call_count += 1
         case offset
         when 0
@@ -38,7 +38,7 @@ RSpec.describe Tenable::Pagination do
     it 'stops when offset >= total' do
       call_count = 0
 
-      paginator = described_class.new(limit: 3) do |offset, _limit|
+      paginator = described_class.new(limit: 3) do |_offset, _limit|
         call_count += 1
         { total: 3, items: %w[x y z] }
       end

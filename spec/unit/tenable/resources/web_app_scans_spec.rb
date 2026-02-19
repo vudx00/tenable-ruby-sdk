@@ -195,11 +195,11 @@ RSpec.describe Tenable::Resources::WebAppScans do
           .to_return(
             status: 200,
             body: JSON.generate({
-              'findings' => [
-                { 'finding_id' => 'f-003', 'name' => 'Open Redirect', 'severity' => 'low' }
-              ],
-              'pagination' => { 'total' => 15, 'offset' => 2, 'limit' => 5 }
-            }),
+                                  'findings' => [
+                                    { 'finding_id' => 'f-003', 'name' => 'Open Redirect', 'severity' => 'low' }
+                                  ],
+                                  'pagination' => { 'total' => 15, 'offset' => 2, 'limit' => 5 }
+                                }),
             headers: { 'Content-Type' => 'application/json' }
           )
       end
@@ -222,9 +222,12 @@ RSpec.describe Tenable::Resources::WebAppScans do
       before do
         stub_request(:get, "https://cloud.tenable.com/was/v2/configs/#{config_id}/scans/#{scan_id}")
           .to_return(
-            { status: 200, body: JSON.generate({ 'status' => 'scanning' }), headers: { 'Content-Type' => 'application/json' } },
-            { status: 200, body: JSON.generate({ 'status' => 'scanning' }), headers: { 'Content-Type' => 'application/json' } },
-            { status: 200, body: JSON.generate({ 'status' => 'completed' }), headers: { 'Content-Type' => 'application/json' } }
+            { status: 200, body: JSON.generate({ 'status' => 'scanning' }),
+              headers: { 'Content-Type' => 'application/json' } },
+            { status: 200, body: JSON.generate({ 'status' => 'scanning' }),
+              headers: { 'Content-Type' => 'application/json' } },
+            { status: 200, body: JSON.generate({ 'status' => 'completed' }),
+              headers: { 'Content-Type' => 'application/json' } }
           )
       end
 
@@ -240,8 +243,10 @@ RSpec.describe Tenable::Resources::WebAppScans do
       before do
         stub_request(:get, "https://cloud.tenable.com/was/v2/configs/#{config_id}/scans/#{scan_id}")
           .to_return(
-            { status: 200, body: JSON.generate({ 'status' => 'scanning' }), headers: { 'Content-Type' => 'application/json' } },
-            { status: 200, body: JSON.generate({ 'status' => 'failed' }), headers: { 'Content-Type' => 'application/json' } }
+            { status: 200, body: JSON.generate({ 'status' => 'scanning' }),
+              headers: { 'Content-Type' => 'application/json' } },
+            { status: 200, body: JSON.generate({ 'status' => 'failed' }),
+              headers: { 'Content-Type' => 'application/json' } }
           )
       end
 

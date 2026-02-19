@@ -14,7 +14,7 @@ RSpec.describe Tenable::Models::Finding do
         'name' => 'SQL Injection',
         'description' => 'User input is not properly sanitized before being used in a SQL query.',
         'remediation' => 'Use parameterized queries or prepared statements.',
-        'plugin_id' => 98765
+        'plugin_id' => 98_765
       }
     end
 
@@ -43,7 +43,7 @@ RSpec.describe Tenable::Models::Finding do
     end
 
     it 'returns the plugin_id as an Integer' do
-      expect(finding.plugin_id).to eq(98765)
+      expect(finding.plugin_id).to eq(98_765)
     end
   end
 
@@ -55,7 +55,7 @@ RSpec.describe Tenable::Models::Finding do
         'url' => 'https://example.com/path',
         'name' => 'Information Disclosure',
         'description' => 'Server version is exposed in response headers.',
-        'plugin_id' => 11111
+        'plugin_id' => 11_111
       }
     end
 

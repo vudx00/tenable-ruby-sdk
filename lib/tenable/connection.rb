@@ -1,9 +1,18 @@
 # frozen_string_literal: true
 
 module Tenable
+  # Manages the Faraday HTTP connection with configured middleware.
+  #
+  # Automatically configures authentication, retry, and logging middleware
+  # based on the provided {Configuration}.
   class Connection
+    # @return [Faraday::Connection] the underlying Faraday connection
     attr_reader :faraday
 
+    # Creates a new connection from the given configuration.
+    #
+    # @param config [Configuration] a validated configuration instance
+    # @raise [ArgumentError] if the base_url does not use HTTPS
     def initialize(config)
       @config = config
       validate_tls!
