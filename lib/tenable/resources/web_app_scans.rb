@@ -98,6 +98,54 @@ module Tenable
           sleep(poll_interval)
         end
       end
+
+      # Retrieves details of a specific WAS scan.
+      #
+      # @param scan_id [String] the scan ID
+      # @return [Hash] scan details
+      def get_scan(scan_id)
+        get("/was/v2/scans/#{scan_id}")
+      end
+
+      # Stops a running WAS scan.
+      #
+      # @param scan_id [String] the scan ID
+      # @return [Hash] the updated scan status
+      def stop_scan(scan_id)
+        patch("/was/v2/scans/#{scan_id}/status", { 'status' => 'stopped' })
+      end
+
+      # Deletes a WAS scan.
+      #
+      # @param scan_id [String] the scan ID
+      # @return [Hash, nil] parsed response or nil
+      def delete_scan(scan_id)
+        delete("/was/v2/scans/#{scan_id}")
+      end
+
+      # Searches WAS scans.
+      #
+      # @param params [Hash] search parameters
+      # @return [Hash] search results with items and pagination
+      def search_scans(**params)
+        post('/was/v2/scans/search', params)
+      end
+
+      # Searches WAS vulnerabilities.
+      #
+      # @param params [Hash] search parameters
+      # @return [Hash] search results with items and pagination
+      def search_vulnerabilities(**params)
+        post('/was/v2/vulnerabilities/search', params)
+      end
+
+      # Retrieves details for a specific WAS vulnerability.
+      #
+      # @param vuln_id [String] the vulnerability ID
+      # @return [Hash] vulnerability details
+      def vulnerability_details(vuln_id)
+        get("/was/v2/vulns/#{vuln_id}")
+      end
     end
   end
 end
