@@ -63,6 +63,33 @@ module Tenable
       rescue JSON::ParserError
         raise ParseError, "Failed to parse response: #{response.body[0..100]}"
       end
+
+      # Performs a GET request and returns the raw response body without JSON parsing.
+      # Useful for binary downloads (e.g., PDF, Nessus files).
+      #
+      # @param path [String] the API endpoint path
+      # @param params [Hash] query parameters
+      # @return [String] raw response body
+      # @raise [AuthenticationError] on 401 responses
+      # @raise [RateLimitError] on 429 responses
+      # @raise [ApiError] on other non-2xx responses
+      def get_raw(path, params = {})
+        response = @connection.faraday.get(path, params)
+        handle_response_raw(response)
+      end
+
+      def handle_response_raw(response)
+        case response.status
+        when 200..299
+          response.body
+        when 401
+          raise AuthenticationError
+        when 429
+          raise RateLimitError.new(status_code: response.status, body: response.body)
+        else
+          raise ApiError.new(status_code: response.status, body: response.body)
+        end
+      end
     end
   end
 end
