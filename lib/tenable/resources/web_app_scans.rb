@@ -22,6 +22,39 @@ module Tenable
         post('/was/v2/configs', { 'name' => name, 'target' => target })
       end
 
+      # Retrieves a scan configuration by ID.
+      #
+      # @param config_id [String] the scan configuration ID
+      # @return [Hash] the configuration data
+      def get_config(config_id)
+        get("/was/v2/configs/#{config_id}")
+      end
+
+      # Updates a scan configuration.
+      #
+      # @param config_id [String] the scan configuration ID
+      # @param params [Hash] configuration parameters to update
+      # @return [Hash] the updated configuration data
+      def update_config(config_id, params)
+        put("/was/v2/configs/#{config_id}", params)
+      end
+
+      # Deletes a scan configuration.
+      #
+      # @param config_id [String] the scan configuration ID
+      # @return [Hash, nil] parsed response or nil
+      def delete_config(config_id)
+        delete("/was/v2/configs/#{config_id}")
+      end
+
+      # Searches scan configurations.
+      #
+      # @param params [Hash] search parameters
+      # @return [Hash] search results with items and pagination
+      def search_configs(**params)
+        post('/was/v2/configs/search', params)
+      end
+
       # Launches a scan for the given configuration.
       #
       # @param config_id [String] the scan configuration ID
