@@ -43,12 +43,78 @@ module Tenable
         post("/scans/#{scan_id}/launch")
       end
 
+      # Retrieves full details of a scan including host and vulnerability info.
+      #
+      # @param scan_id [Integer, String] the scan ID
+      # @return [Hash] detailed scan data
+      def details(scan_id)
+        get("/scans/#{scan_id}")
+      end
+
+      # Updates an existing scan configuration.
+      #
+      # @param scan_id [Integer, String] the scan ID
+      # @param params [Hash] scan configuration to update
+      # @return [Hash] the updated scan data
+      def update(scan_id, params)
+        put("/scans/#{scan_id}", params)
+      end
+
+      # Deletes a scan.
+      #
+      # @param scan_id [Integer, String] the scan ID
+      # @return [Hash, nil] parsed response or nil
+      def destroy(scan_id)
+        delete("/scans/#{scan_id}")
+      end
+
       # Retrieves the latest status of a scan.
       #
       # @param scan_id [Integer, String] the scan ID
       # @return [Hash] status data for the scan
       def status(scan_id)
         get("/scans/#{scan_id}/latest-status")
+      end
+
+      # Pauses a running scan.
+      #
+      # @param scan_id [Integer, String] the scan ID
+      # @return [Hash, nil] parsed response
+      def pause(scan_id)
+        post("/scans/#{scan_id}/pause")
+      end
+
+      # Resumes a paused scan.
+      #
+      # @param scan_id [Integer, String] the scan ID
+      # @return [Hash, nil] parsed response
+      def resume(scan_id)
+        post("/scans/#{scan_id}/resume")
+      end
+
+      # Stops a running scan.
+      #
+      # @param scan_id [Integer, String] the scan ID
+      # @return [Hash, nil] parsed response
+      def stop(scan_id)
+        post("/scans/#{scan_id}/stop")
+      end
+
+      # Copies a scan.
+      #
+      # @param scan_id [Integer, String] the scan ID
+      # @return [Hash] the copied scan data
+      def copy(scan_id)
+        post("/scans/#{scan_id}/copy")
+      end
+
+      # Updates the schedule for a scan.
+      #
+      # @param scan_id [Integer, String] the scan ID
+      # @param params [Hash] schedule configuration
+      # @return [Hash] the updated schedule data
+      def schedule(scan_id, params)
+        put("/scans/#{scan_id}/schedule", params)
       end
 
       # Initiates a scan report export.
