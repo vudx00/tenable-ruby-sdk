@@ -85,6 +85,29 @@ RSpec.describe Tenable::Resources::Exports do
     end
   end
 
+  describe '#cancel' do
+    before do
+      stub_request(:post, "https://cloud.tenable.com/vulns/export/#{export_uuid}/cancel")
+        .to_return(
+          status: 200,
+          body: JSON.generate({ 'status' => 'CANCELLED' }),
+          headers: { 'Content-Type' => 'application/json' }
+        )
+    end
+
+    it 'sends a POST request to the cancel endpoint' do
+      resource.cancel(export_uuid)
+
+      expect(WebMock).to have_requested(:post, "https://cloud.tenable.com/vulns/export/#{export_uuid}/cancel")
+    end
+
+    it 'returns the cancellation response' do
+      result = resource.cancel(export_uuid)
+
+      expect(result['status']).to eq('CANCELLED')
+    end
+  end
+
   describe '#download_chunk' do
     let(:chunk_id) { 0 }
     let(:chunk_data) do

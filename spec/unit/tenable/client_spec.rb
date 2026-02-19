@@ -56,6 +56,10 @@ RSpec.describe Tenable::Client do
       expect(client.exports).to be_a(Tenable::Resources::Exports)
     end
 
+    it 'returns an AssetExports resource' do
+      expect(client.asset_exports).to be_a(Tenable::Resources::AssetExports)
+    end
+
     it 'returns a Scans resource' do
       expect(client.scans).to be_a(Tenable::Resources::Scans)
     end

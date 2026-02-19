@@ -48,6 +48,13 @@ module Tenable
       Resources::Exports.new(@connection)
     end
 
+    # Returns an asset exports resource for bulk asset export operations.
+    #
+    # @return [Resources::AssetExports]
+    def asset_exports
+      Resources::AssetExports.new(@connection)
+    end
+
     # Returns a scans resource for managing vulnerability scans.
     #
     # @return [Resources::Scans]
