@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
+require 'tempfile'
 
 RSpec.describe 'WAS export workflow', :integration do
   let(:access_key) { 'ak' }
@@ -15,11 +16,22 @@ RSpec.describe 'WAS export workflow', :integration do
   describe 'per-scan export flow' do
     before do
       stub_request(:put, "#{base_url}/was/v2/scans/#{scan_id}/export")
-        .with(headers: { 'X-ApiKeys' => api_keys_header })
+        .with(
+          body: JSON.generate({ 'format' => 'pdf' }),
+          headers: { 'X-ApiKeys' => api_keys_header, 'Content-Type' => 'application/json' }
+        )
         .to_return(
           status: 200,
           headers: { 'Content-Type' => 'application/json' },
           body: JSON.generate({ 'scan_id' => scan_id, 'status' => 'exporting' })
+        )
+
+      stub_request(:get, "#{base_url}/was/v2/scans/#{scan_id}/export/status")
+        .with(headers: { 'X-ApiKeys' => api_keys_header })
+        .to_return(
+          status: 200,
+          headers: { 'Content-Type' => 'application/json' },
+          body: JSON.generate({ 'status' => 'ready' })
         )
 
       stub_request(:get, "#{base_url}/was/v2/scans/#{scan_id}/export/download")
@@ -31,16 +43,27 @@ RSpec.describe 'WAS export workflow', :integration do
         )
     end
 
-    it 'initiates an export and downloads the result' do
-      result = client.web_app_scans.export_scan(scan_id)
-      expect(result['status']).to eq('exporting')
+    it 'exports a scan using the convenience method and saves to disk' do
+      tmpfile = Tempfile.new(['was_export', '.pdf'])
 
-      content = client.web_app_scans.download_scan_export(scan_id)
-      expect(content).to be_a(String)
-      expect(content).to eq(binary_content)
+      result = client.web_app_scans.export(scan_id, format: 'pdf', save_path: tmpfile.path,
+                                                     timeout: 30, poll_interval: 0)
+
+      expect(result).to eq(tmpfile.path)
+      expect(File.binread(tmpfile.path)).to eq(binary_content)
 
       expect(WebMock).to have_requested(:put, "#{base_url}/was/v2/scans/#{scan_id}/export").once
+      expect(WebMock).to have_requested(:get, "#{base_url}/was/v2/scans/#{scan_id}/export/status").once
       expect(WebMock).to have_requested(:get, "#{base_url}/was/v2/scans/#{scan_id}/export/download").once
+    ensure
+      tmpfile&.close!
+    end
+
+    it 'returns raw binary content when no save_path is given' do
+      content = client.web_app_scans.export(scan_id, format: 'pdf', timeout: 30, poll_interval: 0)
+
+      expect(content).to be_a(String)
+      expect(content).to eq(binary_content)
     end
   end
 

@@ -6,8 +6,17 @@ module Tenable
     class WebAppScans < Base
       TERMINAL_STATUSES = %w[completed failed cancelled error].freeze
 
+      # Supported scan export formats.
+      SUPPORTED_EXPORT_FORMATS = %w[pdf csv nessus].freeze
+
       # @return [Integer] default seconds between status polls
       DEFAULT_POLL_INTERVAL = 2
+
+      # @return [Integer] default seconds between export status polls
+      DEFAULT_EXPORT_POLL_INTERVAL = 5
+
+      # @return [Integer] default timeout in seconds for waiting on export completion
+      DEFAULT_EXPORT_TIMEOUT = 600
 
       # Creates a new web application scan configuration.
       #
@@ -150,9 +159,24 @@ module Tenable
       # Initiates an export for a specific WAS scan.
       #
       # @param scan_id [String] the scan ID
+      # @param format [String] export format — one of "pdf", "csv", or "nessus"
+      # @param body [Hash] additional export parameters
       # @return [Hash] export initiation response
-      def export_scan(scan_id)
-        put("/was/v2/scans/#{scan_id}/export")
+      # @raise [ArgumentError] if the format is not supported
+      def export_scan(scan_id, format:, **body)
+        unless SUPPORTED_EXPORT_FORMATS.include?(format)
+          raise ArgumentError, "Unsupported format '#{format}'. Must be one of: #{SUPPORTED_EXPORT_FORMATS.join(', ')}"
+        end
+
+        put("/was/v2/scans/#{scan_id}/export", body.merge('format' => format))
+      end
+
+      # Retrieves the status of a WAS scan export.
+      #
+      # @param scan_id [String] the scan ID
+      # @return [Hash] status data with +"status"+ key ("ready" or "loading")
+      def export_scan_status(scan_id)
+        get("/was/v2/scans/#{scan_id}/export/status")
       end
 
       # Downloads a completed WAS scan export as raw binary data.
@@ -161,6 +185,54 @@ module Tenable
       # @return [String] raw binary content of the export
       def download_scan_export(scan_id)
         get_raw("/was/v2/scans/#{scan_id}/export/download")
+      end
+
+      # Polls until a WAS scan export is ready for download.
+      #
+      # @param scan_id [String] the scan ID
+      # @param timeout [Integer] maximum seconds to wait (default: 600)
+      # @param poll_interval [Integer] seconds between status checks (default: 5)
+      # @return [Hash] the final status data when export is ready
+      # @raise [Tenable::TimeoutError] if the export does not become ready within the timeout
+      def wait_for_scan_export(scan_id, timeout: DEFAULT_EXPORT_TIMEOUT, poll_interval: DEFAULT_EXPORT_POLL_INTERVAL)
+        deadline = Time.now + timeout
+        loop do
+          raise Tenable::TimeoutError, "WAS scan export for #{scan_id} timed out" if Time.now >= deadline
+
+          status_data = export_scan_status(scan_id)
+          return status_data if status_data['status'] == 'ready'
+
+          sleep(poll_interval)
+        end
+      end
+
+      # Convenience method: requests an export, waits for completion, and downloads the result.
+      #
+      # @param scan_id [String] the scan ID
+      # @param format [String] export format — one of "pdf", "csv", or "nessus"
+      # @param save_path [String, nil] if provided, writes binary content to this file path
+      # @param timeout [Integer] maximum seconds to wait (default: 600)
+      # @param poll_interval [Integer] seconds between status checks (default: 5)
+      # @param body [Hash] additional export parameters
+      # @return [String] the save_path if given, otherwise the raw binary content
+      #
+      # @example Download PDF to disk
+      #   client.web_app_scans.export('scan-123', format: 'pdf', save_path: '/tmp/report.pdf')
+      #
+      # @example Get raw binary content
+      #   binary = client.web_app_scans.export('scan-123', format: 'nessus')
+      def export(scan_id, format:, save_path: nil, timeout: DEFAULT_EXPORT_TIMEOUT,
+                 poll_interval: DEFAULT_EXPORT_POLL_INTERVAL, **body)
+        export_scan(scan_id, format: format, **body)
+        wait_for_scan_export(scan_id, timeout: timeout, poll_interval: poll_interval)
+        content = download_scan_export(scan_id)
+
+        if save_path
+          File.binwrite(save_path, content)
+          save_path
+        else
+          content
+        end
       end
 
       # Initiates a bulk WAS findings export.

@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
+require 'tempfile'
 
 RSpec.describe Tenable::Resources::WebAppScans do
   let(:config) do
@@ -514,19 +515,127 @@ RSpec.describe Tenable::Resources::WebAppScans do
 
     before do
       stub_request(:put, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/export")
+        .with(body: JSON.generate({ 'format' => 'pdf' }), headers: { 'Content-Type' => 'application/json' })
         .to_return(status: 200, body: JSON.generate(response_body), headers: { 'Content-Type' => 'application/json' })
     end
 
-    it 'sends a PUT request to /was/v2/scans/{scan_id}/export' do
-      resource.export_scan(scan_id)
+    it 'sends a PUT request to /was/v2/scans/{scan_id}/export with format' do
+      resource.export_scan(scan_id, format: 'pdf')
 
       expect(WebMock).to have_requested(:put, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/export")
+        .with(body: JSON.generate({ 'format' => 'pdf' }))
     end
 
     it 'returns the export initiation response' do
-      result = resource.export_scan(scan_id)
+      result = resource.export_scan(scan_id, format: 'pdf')
 
       expect(result['status']).to eq('exporting')
+    end
+
+    it 'raises ArgumentError for unsupported format' do
+      expect { resource.export_scan(scan_id, format: 'xml') }
+        .to raise_error(ArgumentError, /Unsupported format 'xml'/)
+    end
+  end
+
+  describe '#export_scan_status' do
+    let(:scan_id) { 'scan-xyz-789' }
+    let(:response_body) { { 'status' => 'ready' } }
+
+    before do
+      stub_request(:get, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/export/status")
+        .to_return(status: 200, body: JSON.generate(response_body), headers: { 'Content-Type' => 'application/json' })
+    end
+
+    it 'sends a GET request to the export status endpoint' do
+      resource.export_scan_status(scan_id)
+
+      expect(WebMock).to have_requested(:get, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/export/status")
+    end
+
+    it 'returns status data' do
+      result = resource.export_scan_status(scan_id)
+
+      expect(result['status']).to eq('ready')
+    end
+  end
+
+  describe '#wait_for_scan_export' do
+    let(:scan_id) { 'scan-xyz-789' }
+
+    context 'when export becomes ready after polling' do
+      before do
+        stub_request(:get, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/export/status")
+          .to_return(
+            { status: 200, body: JSON.generate({ 'status' => 'loading' }),
+              headers: { 'Content-Type' => 'application/json' } },
+            { status: 200, body: JSON.generate({ 'status' => 'ready' }),
+              headers: { 'Content-Type' => 'application/json' } }
+          )
+      end
+
+      it 'polls until status is ready' do
+        result = resource.wait_for_scan_export(scan_id, timeout: 30, poll_interval: 0)
+
+        expect(result['status']).to eq('ready')
+        expect(WebMock).to have_requested(:get, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/export/status").times(2)
+      end
+    end
+
+    context 'when export times out' do
+      before do
+        stub_request(:get, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/export/status")
+          .to_return(
+            status: 200, body: JSON.generate({ 'status' => 'loading' }),
+            headers: { 'Content-Type' => 'application/json' }
+          )
+      end
+
+      it 'raises TimeoutError' do
+        expect { resource.wait_for_scan_export(scan_id, timeout: 0, poll_interval: 0) }
+          .to raise_error(Tenable::TimeoutError, /timed out/)
+      end
+    end
+  end
+
+  describe '#export' do
+    let(:scan_id) { 'scan-xyz-789' }
+    let(:binary_content) { "\x50\x4B\x03\x04 fake pdf content" }
+
+    before do
+      stub_request(:put, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/export")
+        .with(body: JSON.generate({ 'format' => 'pdf' }), headers: { 'Content-Type' => 'application/json' })
+        .to_return(status: 200, body: JSON.generate({ 'status' => 'exporting' }),
+                   headers: { 'Content-Type' => 'application/json' })
+
+      stub_request(:get, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/export/status")
+        .to_return(status: 200, body: JSON.generate({ 'status' => 'ready' }),
+                   headers: { 'Content-Type' => 'application/json' })
+
+      stub_request(:get, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/export/download")
+        .to_return(status: 200, body: binary_content, headers: { 'Content-Type' => 'application/octet-stream' })
+    end
+
+    it 'chains export_scan, wait, and download returning binary content' do
+      result = resource.export(scan_id, format: 'pdf', timeout: 30, poll_interval: 0)
+
+      expect(result).to eq(binary_content)
+      expect(WebMock).to have_requested(:put, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/export").once
+      expect(WebMock).to have_requested(:get, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/export/status").once
+      expect(WebMock).to have_requested(:get, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/export/download").once
+    end
+
+    context 'with save_path' do
+      let(:tmpfile) { Tempfile.new(['was_export', '.pdf']) }
+
+      after { tmpfile.close! }
+
+      it 'writes binary content to disk and returns the path' do
+        result = resource.export(scan_id, format: 'pdf', save_path: tmpfile.path, timeout: 30, poll_interval: 0)
+
+        expect(result).to eq(tmpfile.path)
+        expect(File.binread(tmpfile.path)).to eq(binary_content)
+      end
     end
   end
 
