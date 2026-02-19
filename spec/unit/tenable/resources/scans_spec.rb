@@ -367,4 +367,166 @@ RSpec.describe Tenable::Resources::Scans do
       tmpfile&.unlink
     end
   end
+
+  describe '#details' do
+    let(:scan_id) { 42 }
+    let(:response_body) do
+      { 'info' => { 'name' => 'My Scan', 'status' => 'completed' }, 'hosts' => [] }
+    end
+
+    before do
+      stub_request(:get, "https://cloud.tenable.com/scans/#{scan_id}")
+        .to_return(status: 200, body: JSON.generate(response_body), headers: { 'Content-Type' => 'application/json' })
+    end
+
+    it 'sends a GET request to /scans/{id}' do
+      resource.details(scan_id)
+
+      expect(WebMock).to have_requested(:get, "https://cloud.tenable.com/scans/#{scan_id}")
+    end
+
+    it 'returns parsed scan details' do
+      result = resource.details(scan_id)
+
+      expect(result['info']['name']).to eq('My Scan')
+    end
+  end
+
+  describe '#update' do
+    let(:scan_id) { 42 }
+    let(:params) { { 'settings' => { 'name' => 'Updated Scan' } } }
+    let(:response_body) { { 'id' => scan_id, 'name' => 'Updated Scan' } }
+
+    before do
+      stub_request(:put, "https://cloud.tenable.com/scans/#{scan_id}")
+        .with(body: JSON.generate(params), headers: { 'Content-Type' => 'application/json' })
+        .to_return(status: 200, body: JSON.generate(response_body), headers: { 'Content-Type' => 'application/json' })
+    end
+
+    it 'sends a PUT request to /scans/{id}' do
+      resource.update(scan_id, params)
+
+      expect(WebMock).to have_requested(:put, "https://cloud.tenable.com/scans/#{scan_id}")
+        .with(body: JSON.generate(params))
+    end
+
+    it 'returns the updated scan data' do
+      result = resource.update(scan_id, params)
+
+      expect(result['name']).to eq('Updated Scan')
+    end
+  end
+
+  describe '#destroy' do
+    let(:scan_id) { 42 }
+
+    before do
+      stub_request(:delete, "https://cloud.tenable.com/scans/#{scan_id}")
+        .to_return(status: 200, body: '', headers: { 'Content-Type' => 'application/json' })
+    end
+
+    it 'sends a DELETE request to /scans/{id}' do
+      resource.destroy(scan_id)
+
+      expect(WebMock).to have_requested(:delete, "https://cloud.tenable.com/scans/#{scan_id}")
+    end
+
+    it 'returns nil for empty response' do
+      result = resource.destroy(scan_id)
+
+      expect(result).to be_nil
+    end
+  end
+
+  describe '#pause' do
+    let(:scan_id) { 42 }
+
+    before do
+      stub_request(:post, "https://cloud.tenable.com/scans/#{scan_id}/pause")
+        .to_return(status: 200, body: '', headers: { 'Content-Type' => 'application/json' })
+    end
+
+    it 'sends a POST request to /scans/{id}/pause' do
+      resource.pause(scan_id)
+
+      expect(WebMock).to have_requested(:post, "https://cloud.tenable.com/scans/#{scan_id}/pause")
+    end
+  end
+
+  describe '#resume' do
+    let(:scan_id) { 42 }
+
+    before do
+      stub_request(:post, "https://cloud.tenable.com/scans/#{scan_id}/resume")
+        .to_return(status: 200, body: '', headers: { 'Content-Type' => 'application/json' })
+    end
+
+    it 'sends a POST request to /scans/{id}/resume' do
+      resource.resume(scan_id)
+
+      expect(WebMock).to have_requested(:post, "https://cloud.tenable.com/scans/#{scan_id}/resume")
+    end
+  end
+
+  describe '#stop' do
+    let(:scan_id) { 42 }
+
+    before do
+      stub_request(:post, "https://cloud.tenable.com/scans/#{scan_id}/stop")
+        .to_return(status: 200, body: '', headers: { 'Content-Type' => 'application/json' })
+    end
+
+    it 'sends a POST request to /scans/{id}/stop' do
+      resource.stop(scan_id)
+
+      expect(WebMock).to have_requested(:post, "https://cloud.tenable.com/scans/#{scan_id}/stop")
+    end
+  end
+
+  describe '#copy' do
+    let(:scan_id) { 42 }
+    let(:response_body) { { 'id' => 99, 'name' => 'Copy of My Scan' } }
+
+    before do
+      stub_request(:post, "https://cloud.tenable.com/scans/#{scan_id}/copy")
+        .to_return(status: 200, body: JSON.generate(response_body), headers: { 'Content-Type' => 'application/json' })
+    end
+
+    it 'sends a POST request to /scans/{id}/copy' do
+      resource.copy(scan_id)
+
+      expect(WebMock).to have_requested(:post, "https://cloud.tenable.com/scans/#{scan_id}/copy")
+    end
+
+    it 'returns the copied scan data' do
+      result = resource.copy(scan_id)
+
+      expect(result['id']).to eq(99)
+    end
+  end
+
+  describe '#schedule' do
+    let(:scan_id) { 42 }
+    let(:params) { { 'enabled' => true, 'rules' => 'FREQ=DAILY' } }
+    let(:response_body) { { 'enabled' => true, 'rules' => 'FREQ=DAILY' } }
+
+    before do
+      stub_request(:put, "https://cloud.tenable.com/scans/#{scan_id}/schedule")
+        .with(body: JSON.generate(params), headers: { 'Content-Type' => 'application/json' })
+        .to_return(status: 200, body: JSON.generate(response_body), headers: { 'Content-Type' => 'application/json' })
+    end
+
+    it 'sends a PUT request to /scans/{id}/schedule' do
+      resource.schedule(scan_id, params)
+
+      expect(WebMock).to have_requested(:put, "https://cloud.tenable.com/scans/#{scan_id}/schedule")
+        .with(body: JSON.generate(params))
+    end
+
+    it 'returns the schedule data' do
+      result = resource.schedule(scan_id, params)
+
+      expect(result['enabled']).to be true
+    end
+  end
 end
