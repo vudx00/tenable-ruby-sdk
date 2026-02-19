@@ -135,4 +135,125 @@ RSpec.describe Tenable::Resources::Vulnerabilities do
       end
     end
   end
+
+  describe '#info' do
+    let(:plugin_id) { 19_506 }
+    let(:response_body) do
+      { 'info' => { 'plugindescription' => { 'pluginname' => 'Nessus Scan Information' } } }
+    end
+
+    before do
+      stub_request(:get, "https://cloud.tenable.com/workbenches/vulnerabilities/#{plugin_id}/info")
+        .to_return(status: 200, body: JSON.generate(response_body), headers: { 'Content-Type' => 'application/json' })
+    end
+
+    it 'sends a GET request to /workbenches/vulnerabilities/{plugin_id}/info' do
+      resource.info(plugin_id)
+
+      expect(WebMock).to have_requested(:get, "https://cloud.tenable.com/workbenches/vulnerabilities/#{plugin_id}/info")
+    end
+
+    it 'returns vulnerability info data' do
+      result = resource.info(plugin_id)
+
+      expect(result['info']).to be_a(Hash)
+    end
+  end
+
+  describe '#outputs' do
+    let(:plugin_id) { 19_506 }
+    let(:response_body) do
+      { 'outputs' => [{ 'plugin_output' => 'scan info output', 'states' => [{ 'name' => 'open' }] }] }
+    end
+
+    before do
+      stub_request(:get, "https://cloud.tenable.com/workbenches/vulnerabilities/#{plugin_id}/outputs")
+        .to_return(status: 200, body: JSON.generate(response_body), headers: { 'Content-Type' => 'application/json' })
+    end
+
+    it 'sends a GET request to /workbenches/vulnerabilities/{plugin_id}/outputs' do
+      resource.outputs(plugin_id)
+
+      expect(WebMock).to have_requested(:get, "https://cloud.tenable.com/workbenches/vulnerabilities/#{plugin_id}/outputs")
+    end
+
+    it 'returns plugin output data' do
+      result = resource.outputs(plugin_id)
+
+      expect(result['outputs']).to be_an(Array)
+    end
+  end
+
+  describe '#assets' do
+    let(:response_body) do
+      { 'assets' => [{ 'id' => 'asset-001', 'fqdn' => ['host1.example.com'] }] }
+    end
+
+    before do
+      stub_request(:get, 'https://cloud.tenable.com/workbenches/assets')
+        .to_return(status: 200, body: JSON.generate(response_body), headers: { 'Content-Type' => 'application/json' })
+    end
+
+    it 'sends a GET request to /workbenches/assets' do
+      resource.assets
+
+      expect(WebMock).to have_requested(:get, 'https://cloud.tenable.com/workbenches/assets')
+    end
+
+    it 'returns asset data' do
+      result = resource.assets
+
+      expect(result['assets']).to be_an(Array)
+      expect(result['assets'].first['id']).to eq('asset-001')
+    end
+  end
+
+  describe '#asset_info' do
+    let(:asset_id) { 'asset-001' }
+    let(:response_body) do
+      { 'info' => { 'fqdn' => ['host1.example.com'], 'operating_system' => ['Linux'] } }
+    end
+
+    before do
+      stub_request(:get, "https://cloud.tenable.com/workbenches/assets/#{asset_id}/info")
+        .to_return(status: 200, body: JSON.generate(response_body), headers: { 'Content-Type' => 'application/json' })
+    end
+
+    it 'sends a GET request to /workbenches/assets/{asset_id}/info' do
+      resource.asset_info(asset_id)
+
+      expect(WebMock).to have_requested(:get, "https://cloud.tenable.com/workbenches/assets/#{asset_id}/info")
+    end
+
+    it 'returns asset info data' do
+      result = resource.asset_info(asset_id)
+
+      expect(result['info']['fqdn']).to include('host1.example.com')
+    end
+  end
+
+  describe '#asset_vulnerabilities' do
+    let(:asset_id) { 'asset-001' }
+    let(:response_body) do
+      { 'vulnerabilities' => [{ 'plugin_id' => 19_506, 'severity' => 0 }] }
+    end
+
+    before do
+      stub_request(:get, "https://cloud.tenable.com/workbenches/assets/#{asset_id}/vulnerabilities")
+        .to_return(status: 200, body: JSON.generate(response_body), headers: { 'Content-Type' => 'application/json' })
+    end
+
+    it 'sends a GET request to /workbenches/assets/{asset_id}/vulnerabilities' do
+      resource.asset_vulnerabilities(asset_id)
+
+      expect(WebMock).to have_requested(:get, "https://cloud.tenable.com/workbenches/assets/#{asset_id}/vulnerabilities")
+    end
+
+    it 'returns vulnerability data for the asset' do
+      result = resource.asset_vulnerabilities(asset_id)
+
+      expect(result['vulnerabilities']).to be_an(Array)
+      expect(result['vulnerabilities'].first['plugin_id']).to eq(19_506)
+    end
+  end
 end
