@@ -30,3 +30,15 @@ RSpec/NestedGroups:
 
 Gemspec/DevelopmentDependencies:
   Enabled: false
+
+Metrics/ParameterLists:
+  CountKeywordArgs: false
+
+Metrics/AbcSize:
+  Max: 20
+
+RSpec/MultipleDescribes:
+  Enabled: false
+
+RSpec/AnyInstance:
+  Enabled: false
