@@ -117,6 +117,33 @@ module Tenable
         put("/scans/#{scan_id}/schedule", params)
       end
 
+      # Retrieves the scan history.
+      #
+      # @param scan_id [Integer, String] the scan ID
+      # @return [Hash] history data including an array of history records
+      def history(scan_id)
+        get("/scans/#{scan_id}/history")
+      end
+
+      # Retrieves details for a specific host within a scan.
+      #
+      # @param scan_id [Integer, String] the scan ID
+      # @param host_id [Integer, String] the host ID
+      # @return [Hash] host details including vulnerability info
+      def host_details(scan_id, host_id)
+        get("/scans/#{scan_id}/hosts/#{host_id}")
+      end
+
+      # Retrieves plugin output for a specific host and plugin within a scan.
+      #
+      # @param scan_id [Integer, String] the scan ID
+      # @param host_id [Integer, String] the host ID
+      # @param plugin_id [Integer, String] the plugin ID
+      # @return [Hash] plugin output data
+      def plugin_output(scan_id, host_id, plugin_id)
+        get("/scans/#{scan_id}/hosts/#{host_id}/plugins/#{plugin_id}")
+      end
+
       # Initiates a scan report export.
       #
       # @param scan_id [Integer, String] the scan ID
