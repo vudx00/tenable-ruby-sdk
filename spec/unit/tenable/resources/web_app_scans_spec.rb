@@ -357,4 +357,154 @@ RSpec.describe Tenable::Resources::WebAppScans do
       expect(result['pagination']['total']).to eq(1)
     end
   end
+
+  describe '#get_scan' do
+    let(:scan_id) { 'scan-xyz-789' }
+    let(:response_body) do
+      { 'scan_id' => scan_id, 'status' => 'completed', 'target' => 'https://example.com' }
+    end
+
+    before do
+      stub_request(:get, "https://cloud.tenable.com/was/v2/scans/#{scan_id}")
+        .to_return(status: 200, body: JSON.generate(response_body), headers: { 'Content-Type' => 'application/json' })
+    end
+
+    it 'sends a GET request to /was/v2/scans/{scan_id}' do
+      resource.get_scan(scan_id)
+
+      expect(WebMock).to have_requested(:get, "https://cloud.tenable.com/was/v2/scans/#{scan_id}")
+    end
+
+    it 'returns scan details' do
+      result = resource.get_scan(scan_id)
+
+      expect(result['scan_id']).to eq(scan_id)
+      expect(result['status']).to eq('completed')
+    end
+  end
+
+  describe '#stop_scan' do
+    let(:scan_id) { 'scan-xyz-789' }
+    let(:response_body) { { 'scan_id' => scan_id, 'status' => 'stopped' } }
+
+    before do
+      stub_request(:patch, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/status")
+        .with(body: JSON.generate({ 'status' => 'stopped' }), headers: { 'Content-Type' => 'application/json' })
+        .to_return(status: 200, body: JSON.generate(response_body), headers: { 'Content-Type' => 'application/json' })
+    end
+
+    it 'sends a PATCH request with stopped status' do
+      resource.stop_scan(scan_id)
+
+      expect(WebMock).to have_requested(:patch, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/status")
+        .with(body: JSON.generate({ 'status' => 'stopped' }))
+    end
+
+    it 'returns the updated status' do
+      result = resource.stop_scan(scan_id)
+
+      expect(result['status']).to eq('stopped')
+    end
+  end
+
+  describe '#delete_scan' do
+    let(:scan_id) { 'scan-xyz-789' }
+
+    before do
+      stub_request(:delete, "https://cloud.tenable.com/was/v2/scans/#{scan_id}")
+        .to_return(status: 200, body: '', headers: { 'Content-Type' => 'application/json' })
+    end
+
+    it 'sends a DELETE request to /was/v2/scans/{scan_id}' do
+      resource.delete_scan(scan_id)
+
+      expect(WebMock).to have_requested(:delete, "https://cloud.tenable.com/was/v2/scans/#{scan_id}")
+    end
+
+    it 'returns nil for empty response' do
+      result = resource.delete_scan(scan_id)
+
+      expect(result).to be_nil
+    end
+  end
+
+  describe '#search_scans' do
+    let(:response_body) do
+      {
+        'items' => [{ 'scan_id' => 'scan-xyz-789', 'status' => 'completed' }],
+        'pagination' => { 'total' => 1, 'offset' => 0, 'limit' => 50 }
+      }
+    end
+
+    before do
+      stub_request(:post, 'https://cloud.tenable.com/was/v2/scans/search')
+        .with(headers: { 'Content-Type' => 'application/json' })
+        .to_return(status: 200, body: JSON.generate(response_body), headers: { 'Content-Type' => 'application/json' })
+    end
+
+    it 'sends a POST request to /was/v2/scans/search' do
+      resource.search_scans(filter: { status: 'completed' })
+
+      expect(WebMock).to have_requested(:post, 'https://cloud.tenable.com/was/v2/scans/search')
+    end
+
+    it 'returns search results' do
+      result = resource.search_scans(filter: { status: 'completed' })
+
+      expect(result['items']).to be_an(Array)
+      expect(result['items'].first['scan_id']).to eq('scan-xyz-789')
+    end
+  end
+
+  describe '#search_vulnerabilities' do
+    let(:response_body) do
+      {
+        'items' => [{ 'vuln_id' => 'v-001', 'name' => 'SQL Injection', 'severity' => 'high' }],
+        'pagination' => { 'total' => 1, 'offset' => 0, 'limit' => 50 }
+      }
+    end
+
+    before do
+      stub_request(:post, 'https://cloud.tenable.com/was/v2/vulnerabilities/search')
+        .with(headers: { 'Content-Type' => 'application/json' })
+        .to_return(status: 200, body: JSON.generate(response_body), headers: { 'Content-Type' => 'application/json' })
+    end
+
+    it 'sends a POST request to /was/v2/vulnerabilities/search' do
+      resource.search_vulnerabilities(filter: { severity: 'high' })
+
+      expect(WebMock).to have_requested(:post, 'https://cloud.tenable.com/was/v2/vulnerabilities/search')
+    end
+
+    it 'returns vulnerability search results' do
+      result = resource.search_vulnerabilities(filter: { severity: 'high' })
+
+      expect(result['items'].first['name']).to eq('SQL Injection')
+    end
+  end
+
+  describe '#vulnerability_details' do
+    let(:vuln_id) { 'v-001' }
+    let(:response_body) do
+      { 'vuln_id' => vuln_id, 'name' => 'SQL Injection', 'severity' => 'high', 'description' => 'A SQL injection...' }
+    end
+
+    before do
+      stub_request(:get, "https://cloud.tenable.com/was/v2/vulns/#{vuln_id}")
+        .to_return(status: 200, body: JSON.generate(response_body), headers: { 'Content-Type' => 'application/json' })
+    end
+
+    it 'sends a GET request to /was/v2/vulns/{vuln_id}' do
+      resource.vulnerability_details(vuln_id)
+
+      expect(WebMock).to have_requested(:get, "https://cloud.tenable.com/was/v2/vulns/#{vuln_id}")
+    end
+
+    it 'returns vulnerability details' do
+      result = resource.vulnerability_details(vuln_id)
+
+      expect(result['vuln_id']).to eq(vuln_id)
+      expect(result['name']).to eq('SQL Injection')
+    end
+  end
 end
