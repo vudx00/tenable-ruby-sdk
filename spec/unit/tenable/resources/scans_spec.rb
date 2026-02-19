@@ -529,4 +529,81 @@ RSpec.describe Tenable::Resources::Scans do
       expect(result['enabled']).to be true
     end
   end
+
+  describe '#history' do
+    let(:scan_id) { 42 }
+    let(:response_body) do
+      { 'history' => [{ 'history_id' => 1, 'status' => 'completed' }] }
+    end
+
+    before do
+      stub_request(:get, "https://cloud.tenable.com/scans/#{scan_id}/history")
+        .to_return(status: 200, body: JSON.generate(response_body), headers: { 'Content-Type' => 'application/json' })
+    end
+
+    it 'sends a GET request to /scans/{id}/history' do
+      resource.history(scan_id)
+
+      expect(WebMock).to have_requested(:get, "https://cloud.tenable.com/scans/#{scan_id}/history")
+    end
+
+    it 'returns history data' do
+      result = resource.history(scan_id)
+
+      expect(result['history']).to be_an(Array)
+      expect(result['history'].first['history_id']).to eq(1)
+    end
+  end
+
+  describe '#host_details' do
+    let(:scan_id) { 42 }
+    let(:host_id) { 5 }
+    let(:response_body) do
+      { 'info' => { 'host-ip' => '10.0.0.1', 'operating-system' => 'Linux' }, 'vulnerabilities' => [] }
+    end
+
+    before do
+      stub_request(:get, "https://cloud.tenable.com/scans/#{scan_id}/hosts/#{host_id}")
+        .to_return(status: 200, body: JSON.generate(response_body), headers: { 'Content-Type' => 'application/json' })
+    end
+
+    it 'sends a GET request to /scans/{scan_id}/hosts/{host_id}' do
+      resource.host_details(scan_id, host_id)
+
+      expect(WebMock).to have_requested(:get, "https://cloud.tenable.com/scans/#{scan_id}/hosts/#{host_id}")
+    end
+
+    it 'returns host details' do
+      result = resource.host_details(scan_id, host_id)
+
+      expect(result['info']['host-ip']).to eq('10.0.0.1')
+    end
+  end
+
+  describe '#plugin_output' do
+    let(:scan_id) { 42 }
+    let(:host_id) { 5 }
+    let(:plugin_id) { 19_506 }
+    let(:response_body) do
+      { 'output' => [{ 'plugin_output' => 'Nessus scan info...', 'ports' => { '0' => [] } }] }
+    end
+
+    before do
+      stub_request(:get, "https://cloud.tenable.com/scans/#{scan_id}/hosts/#{host_id}/plugins/#{plugin_id}")
+        .to_return(status: 200, body: JSON.generate(response_body), headers: { 'Content-Type' => 'application/json' })
+    end
+
+    it 'sends a GET request to /scans/{scan_id}/hosts/{host_id}/plugins/{plugin_id}' do
+      resource.plugin_output(scan_id, host_id, plugin_id)
+
+      expect(WebMock).to have_requested(:get, "https://cloud.tenable.com/scans/#{scan_id}/hosts/#{host_id}/plugins/#{plugin_id}")
+    end
+
+    it 'returns plugin output data' do
+      result = resource.plugin_output(scan_id, host_id, plugin_id)
+
+      expect(result['output']).to be_an(Array)
+      expect(result['output'].first['plugin_output']).to include('Nessus')
+    end
+  end
 end
