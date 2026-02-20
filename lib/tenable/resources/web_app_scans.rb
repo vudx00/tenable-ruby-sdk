@@ -43,8 +43,6 @@ module Tenable
         post('/was/v2/configs', { 'name' => name, 'target' => target })
       end
 
-      # Retrieves a scan configuration by ID.
-      #
       # @param config_id [String] the scan configuration ID
       # @return [Hash] the configuration data
       def get_config(config_id)
@@ -52,8 +50,6 @@ module Tenable
         get("/was/v2/configs/#{config_id}")
       end
 
-      # Updates a scan configuration.
-      #
       # @param config_id [String] the scan configuration ID
       # @param params [Hash] configuration parameters to update
       # @return [Hash] the updated configuration data
@@ -62,8 +58,6 @@ module Tenable
         put("/was/v2/configs/#{config_id}", params)
       end
 
-      # Deletes a scan configuration.
-      #
       # @param config_id [String] the scan configuration ID
       # @return [Hash, nil] parsed response or nil
       def delete_config(config_id)
@@ -71,8 +65,6 @@ module Tenable
         delete("/was/v2/configs/#{config_id}")
       end
 
-      # Searches scan configurations.
-      #
       # @param params [Hash] search parameters
       # @return [Hash] search results with items and pagination
       def search_configs(**params)
@@ -166,8 +158,6 @@ module Tenable
         post("/was/v2/configs/#{config_id}/scans/search", params)
       end
 
-      # Searches WAS vulnerabilities.
-      #
       # @param params [Hash] search parameters
       # @return [Hash] search results with items and pagination
       def search_vulnerabilities(**params)
@@ -326,18 +316,10 @@ module Tenable
 
       private
 
-      # Validates the export format and returns the corresponding MIME type.
-      #
-      # @param format [String] the export format name
-      # @return [String] the MIME content type
-      # @raise [ArgumentError] if the format is not supported
       def validate_export_format!(format)
-        content_type = FORMAT_CONTENT_TYPES[format]
-        unless content_type
+        FORMAT_CONTENT_TYPES.fetch(format) do
           raise ArgumentError, "Unsupported format '#{format}'. Must be one of: #{SUPPORTED_EXPORT_FORMATS.join(', ')}"
         end
-
-        content_type
       end
     end
   end

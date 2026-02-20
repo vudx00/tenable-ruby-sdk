@@ -24,15 +24,23 @@ module Tenable
       Faraday.new(url: @config.base_url) do |f|
         f.headers['Accept'] = 'application/json'
         f.request :json
-        f.use Middleware::Authentication,
-              access_key: @config.access_key,
-              secret_key: @config.secret_key
-        f.use Middleware::Retry, max_retries: @config.max_retries
-        f.use Middleware::Logging, logger: @config.logger
-        f.options.timeout = @config.timeout
-        f.options.open_timeout = @config.open_timeout
+        configure_middleware(f)
+        configure_timeouts(f)
         f.adapter Faraday.default_adapter
       end
+    end
+
+    def configure_middleware(faraday)
+      faraday.use Middleware::Authentication,
+                  access_key: @config.access_key,
+                  secret_key: @config.secret_key
+      faraday.use Middleware::Retry, max_retries: @config.max_retries
+      faraday.use Middleware::Logging, logger: @config.logger
+    end
+
+    def configure_timeouts(faraday)
+      faraday.options.timeout = @config.timeout
+      faraday.options.open_timeout = @config.open_timeout
     end
   end
 end
