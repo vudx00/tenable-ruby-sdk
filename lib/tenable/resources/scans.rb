@@ -127,14 +127,13 @@ module Tenable
         put("/scans/#{scan_id}/schedule", params)
       end
 
-      # Retrieves the scan history.
+      # Retrieves the scan history from the scan details endpoint.
       #
       # @param scan_id [Integer, String] the scan ID
-      # @param params [Hash] optional query parameters (e.g., +limit+, +offset+, +sort+)
-      # @return [Hash] history data including an array of history records
-      def history(scan_id, **params)
-        validate_path_segment!(scan_id, name: 'scan_id')
-        get("/scans/#{scan_id}/history", params)
+      # @return [Array<Hash>] array of history records
+      def history(scan_id)
+        data = details(scan_id)
+        data['history'] || []
       end
 
       # Retrieves details for a specific host within a scan.

@@ -528,39 +528,37 @@ RSpec.describe Tenable::Resources::Scans do
   describe '#history' do
     let(:scan_id) { 42 }
     let(:response_body) do
-      { 'history' => [{ 'history_id' => 1, 'status' => 'completed' }] }
+      {
+        'info' => { 'name' => 'My Scan', 'status' => 'completed' },
+        'history' => [{ 'history_id' => 1, 'status' => 'completed' }]
+      }
     end
 
     before do
-      stub_request(:get, "https://cloud.tenable.com/scans/#{scan_id}/history")
+      stub_request(:get, "https://cloud.tenable.com/scans/#{scan_id}")
         .to_return(status: 200, body: JSON.generate(response_body), headers: { 'Content-Type' => 'application/json' })
     end
 
-    it 'sends a GET request to /scans/{id}/history' do
+    it 'fetches history from the scan details endpoint' do
       resource.history(scan_id)
 
-      expect(WebMock).to have_requested(:get, "https://cloud.tenable.com/scans/#{scan_id}/history")
+      expect(WebMock).to have_requested(:get, "https://cloud.tenable.com/scans/#{scan_id}")
     end
 
-    it 'returns history data' do
+    it 'returns the history array' do
       result = resource.history(scan_id)
 
-      expect(result['history']).to be_an(Array)
-      expect(result['history'].first['history_id']).to eq(1)
+      expect(result).to be_an(Array)
+      expect(result.first['history_id']).to eq(1)
     end
 
-    context 'with query parameters' do
-      before do
-        stub_request(:get, "https://cloud.tenable.com/scans/#{scan_id}/history")
-          .with(query: { 'limit' => '10', 'offset' => '5' })
-          .to_return(status: 200, body: JSON.generate(response_body), headers: { 'Content-Type' => 'application/json' })
-      end
+    context 'when details response has no history key' do
+      let(:response_body) { { 'info' => { 'name' => 'My Scan' } } }
 
-      it 'passes query params to the request' do
-        resource.history(scan_id, limit: 10, offset: 5)
+      it 'returns an empty array' do
+        result = resource.history(scan_id)
 
-        expect(WebMock).to have_requested(:get, "https://cloud.tenable.com/scans/#{scan_id}/history")
-          .with(query: { 'limit' => '10', 'offset' => '5' })
+        expect(result).to eq([])
       end
     end
   end
