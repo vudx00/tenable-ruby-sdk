@@ -23,6 +23,7 @@ module Tenable
     def build_connection
       Faraday.new(url: @config.base_url) do |f|
         f.headers['Accept'] = 'application/json'
+        f.request :json
         f.use Middleware::Authentication,
               access_key: @config.access_key,
               secret_key: @config.secret_key

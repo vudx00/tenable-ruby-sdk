@@ -507,15 +507,15 @@ RSpec.describe Tenable::Resources::WebAppScans do
 
     before do
       stub_request(:put, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/report")
-        .with(body: JSON.generate({ 'format' => 'pdf' }), headers: { 'Content-Type' => 'application/json' })
+        .with(headers: { 'Content-Type' => 'application/pdf' })
         .to_return(status: 200, body: JSON.generate(response_body), headers: { 'Content-Type' => 'application/json' })
     end
 
-    it 'sends a PUT request to /was/v2/scans/{scan_id}/report with format' do
+    it 'sends a PUT request with format as Content-Type header' do
       resource.export_scan(scan_id, format: 'pdf')
 
       expect(WebMock).to have_requested(:put, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/report")
-        .with(body: JSON.generate({ 'format' => 'pdf' }))
+        .with(headers: { 'Content-Type' => 'application/pdf' })
     end
 
     it 'returns the export initiation response' do
@@ -536,11 +536,12 @@ RSpec.describe Tenable::Resources::WebAppScans do
     context 'when report is ready' do
       before do
         stub_request(:get, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/report")
+          .with(headers: { 'Accept' => 'application/pdf', 'Content-Type' => 'application/pdf' })
           .to_return(status: 200, body: 'report content', headers: { 'Content-Type' => 'application/octet-stream' })
       end
 
       it 'returns ready status when the report endpoint returns 200' do
-        result = resource.export_scan_status(scan_id)
+        result = resource.export_scan_status(scan_id, format: 'pdf')
 
         expect(result['status']).to eq('ready')
       end
@@ -549,11 +550,12 @@ RSpec.describe Tenable::Resources::WebAppScans do
     context 'when report is not ready' do
       before do
         stub_request(:get, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/report")
+          .with(headers: { 'Accept' => 'application/pdf', 'Content-Type' => 'application/pdf' })
           .to_return(status: 404, body: '', headers: { 'Content-Type' => 'application/json' })
       end
 
       it 'returns loading status when the report endpoint returns 404' do
-        result = resource.export_scan_status(scan_id)
+        result = resource.export_scan_status(scan_id, format: 'pdf')
 
         expect(result['status']).to eq('loading')
       end
@@ -566,6 +568,7 @@ RSpec.describe Tenable::Resources::WebAppScans do
     context 'when export becomes ready after polling' do
       before do
         stub_request(:get, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/report")
+          .with(headers: { 'Accept' => 'application/pdf', 'Content-Type' => 'application/pdf' })
           .to_return(
             { status: 404, body: '', headers: { 'Content-Type' => 'application/json' } },
             { status: 200, body: 'report content', headers: { 'Content-Type' => 'application/octet-stream' } }
@@ -573,7 +576,7 @@ RSpec.describe Tenable::Resources::WebAppScans do
       end
 
       it 'polls until status is ready' do
-        result = resource.wait_for_scan_export(scan_id, timeout: 30, poll_interval: 0)
+        result = resource.wait_for_scan_export(scan_id, format: 'pdf', timeout: 30, poll_interval: 0)
 
         expect(result['status']).to eq('ready')
         expect(WebMock).to have_requested(:get, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/report").times(2)
@@ -587,7 +590,7 @@ RSpec.describe Tenable::Resources::WebAppScans do
       end
 
       it 'raises TimeoutError' do
-        expect { resource.wait_for_scan_export(scan_id, timeout: 0, poll_interval: 0) }
+        expect { resource.wait_for_scan_export(scan_id, format: 'pdf', timeout: 0, poll_interval: 0) }
           .to raise_error(Tenable::TimeoutError, /timed out/)
       end
     end
@@ -599,12 +602,13 @@ RSpec.describe Tenable::Resources::WebAppScans do
 
     before do
       stub_request(:put, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/report")
-        .with(body: JSON.generate({ 'format' => 'pdf' }), headers: { 'Content-Type' => 'application/json' })
+        .with(headers: { 'Content-Type' => 'application/pdf' })
         .to_return(status: 200, body: JSON.generate({ 'status' => 'exporting' }),
                    headers: { 'Content-Type' => 'application/json' })
 
       # First call for status check (returns ready), second call for download
       stub_request(:get, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/report")
+        .with(headers: { 'Accept' => 'application/pdf', 'Content-Type' => 'application/pdf' })
         .to_return(
           { status: 200, body: 'ready', headers: { 'Content-Type' => 'application/octet-stream' } },
           { status: 200, body: binary_content, headers: { 'Content-Type' => 'application/octet-stream' } }
@@ -639,17 +643,19 @@ RSpec.describe Tenable::Resources::WebAppScans do
 
     before do
       stub_request(:get, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/report")
+        .with(headers: { 'Accept' => 'application/pdf', 'Content-Type' => 'application/pdf' })
         .to_return(status: 200, body: binary_content, headers: { 'Content-Type' => 'application/octet-stream' })
     end
 
-    it 'sends a GET request to the report endpoint' do
-      resource.download_scan_export(scan_id)
+    it 'sends a GET request with format headers' do
+      resource.download_scan_export(scan_id, format: 'pdf')
 
       expect(WebMock).to have_requested(:get, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/report")
+        .with(headers: { 'Accept' => 'application/pdf', 'Content-Type' => 'application/pdf' })
     end
 
     it 'returns raw binary content' do
-      result = resource.download_scan_export(scan_id)
+      result = resource.download_scan_export(scan_id, format: 'pdf')
 
       expect(result).to be_a(String)
       expect(result).to eq(binary_content)

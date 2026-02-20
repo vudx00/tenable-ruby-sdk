@@ -38,10 +38,7 @@ module Tenable
       # @raise [ApiError] on other non-2xx responses
       # @raise [ParseError] if the response is not valid JSON
       def post(path, body = nil)
-        response = @connection.faraday.post(path) do |req|
-          req.headers['Content-Type'] = 'application/json'
-          req.body = JSON.generate(body) if body
-        end
+        response = @connection.faraday.post(path, body)
         handle_response(response)
       end
 
@@ -51,10 +48,7 @@ module Tenable
       # @param body [Hash, nil] request body (serialized to JSON)
       # @return [Hash, Array, nil] parsed JSON response
       def put(path, body = nil)
-        response = @connection.faraday.put(path) do |req|
-          req.headers['Content-Type'] = 'application/json'
-          req.body = JSON.generate(body) if body
-        end
+        response = @connection.faraday.put(path, body)
         handle_response(response)
       end
 
@@ -64,10 +58,7 @@ module Tenable
       # @param body [Hash, nil] request body (serialized to JSON)
       # @return [Hash, Array, nil] parsed JSON response
       def patch(path, body = nil)
-        response = @connection.faraday.patch(path) do |req|
-          req.headers['Content-Type'] = 'application/json'
-          req.body = JSON.generate(body) if body
-        end
+        response = @connection.faraday.patch(path, body)
         handle_response(response)
       end
 

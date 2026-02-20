@@ -6,8 +6,17 @@ module Tenable
     class WebAppScans < Base
       TERMINAL_STATUSES = %w[completed failed cancelled error].freeze
 
+      # Supported scan export formats and their MIME types.
+      FORMAT_CONTENT_TYPES = {
+        'json' => 'application/json',
+        'csv' => 'text/csv',
+        'xml' => 'application/xml',
+        'html' => 'text/html',
+        'pdf' => 'application/pdf'
+      }.freeze
+
       # Supported scan export formats.
-      SUPPORTED_EXPORT_FORMATS = %w[json csv xml html pdf].freeze
+      SUPPORTED_EXPORT_FORMATS = FORMAT_CONTENT_TYPES.keys.freeze
 
       # @return [Integer] default seconds between status polls
       DEFAULT_POLL_INTERVAL = 2
@@ -176,18 +185,19 @@ module Tenable
 
       # Initiates a report export for a specific WAS scan.
       #
+      # The format is specified via the Content-Type header per the Tenable API.
+      #
       # @param scan_id [String] the scan ID
       # @param format [String] export format — one of "json", "csv", "xml", "html", or "pdf"
-      # @param body [Hash] additional export parameters
       # @return [Hash] export initiation response
       # @raise [ArgumentError] if the format is not supported
-      def export_scan(scan_id, format:, **body)
+      def export_scan(scan_id, format:)
         validate_path_segment!(scan_id, name: 'scan_id')
-        unless SUPPORTED_EXPORT_FORMATS.include?(format)
-          raise ArgumentError, "Unsupported format '#{format}'. Must be one of: #{SUPPORTED_EXPORT_FORMATS.join(', ')}"
+        content_type = validate_export_format!(format)
+        response = @connection.faraday.put("/was/v2/scans/#{scan_id}/report") do |req|
+          req.headers['Content-Type'] = content_type
         end
-
-        put("/was/v2/scans/#{scan_id}/report", body.merge('format' => format))
+        handle_response(response)
       end
 
       # Checks the status of a WAS scan report by attempting to fetch it.
@@ -196,10 +206,15 @@ module Tenable
       # indicates the report is still being generated.
       #
       # @param scan_id [String] the scan ID
+      # @param format [String] export format — one of "json", "csv", "xml", "html", or "pdf"
       # @return [Hash] status data with +"status"+ key ("ready" or "loading")
-      def export_scan_status(scan_id)
+      def export_scan_status(scan_id, format:)
         validate_path_segment!(scan_id, name: 'scan_id')
-        response = @connection.faraday.get("/was/v2/scans/#{scan_id}/report")
+        content_type = validate_export_format!(format)
+        response = @connection.faraday.get("/was/v2/scans/#{scan_id}/report") do |req|
+          req.headers['Accept'] = content_type
+          req.headers['Content-Type'] = content_type
+        end
         if response.status == 404
           { 'status' => 'loading' }
         else
@@ -211,23 +226,32 @@ module Tenable
       # Downloads a completed WAS scan export as raw binary data.
       #
       # @param scan_id [String] the scan ID
+      # @param format [String] export format — one of "json", "csv", "xml", "html", or "pdf"
       # @return [String] raw binary content of the export
-      def download_scan_export(scan_id)
+      def download_scan_export(scan_id, format:)
         validate_path_segment!(scan_id, name: 'scan_id')
-        get_raw("/was/v2/scans/#{scan_id}/report")
+        content_type = validate_export_format!(format)
+        response = @connection.faraday.get("/was/v2/scans/#{scan_id}/report") do |req|
+          req.headers['Accept'] = content_type
+          req.headers['Content-Type'] = content_type
+        end
+        raise_for_status(response)
+        response.body
       end
 
       # Polls until a WAS scan export is ready for download.
       #
       # @param scan_id [String] the scan ID
+      # @param format [String] export format — one of "json", "csv", "xml", "html", or "pdf"
       # @param timeout [Integer] maximum seconds to wait (default: 600)
       # @param poll_interval [Integer] seconds between status checks (default: 5)
       # @return [Hash] the final status data when export is ready
       # @raise [Tenable::TimeoutError] if the export does not become ready within the timeout
-      def wait_for_scan_export(scan_id, timeout: DEFAULT_EXPORT_TIMEOUT, poll_interval: DEFAULT_EXPORT_POLL_INTERVAL)
+      def wait_for_scan_export(scan_id, format:, timeout: DEFAULT_EXPORT_TIMEOUT,
+                               poll_interval: DEFAULT_EXPORT_POLL_INTERVAL)
         validate_path_segment!(scan_id, name: 'scan_id')
         poll_until(timeout: timeout, poll_interval: poll_interval, label: "WAS scan export for #{scan_id}") do
-          status_data = export_scan_status(scan_id)
+          status_data = export_scan_status(scan_id, format: format)
           status_data if status_data['status'] == 'ready'
         end
       end
@@ -235,26 +259,25 @@ module Tenable
       # Convenience method: requests an export, waits for completion, and downloads the result.
       #
       # @param scan_id [String] the scan ID
-      # @param format [String] export format — one of "pdf", "csv", or "nessus"
+      # @param format [String] export format — one of "json", "csv", "xml", "html", or "pdf"
       # @param save_path [String, nil] if provided, writes binary content to this file path.
       #   The caller is responsible for ensuring the path is safe and writable.
       #   This value is used as-is with +File.binwrite+ — no sanitization is performed.
       # @param timeout [Integer] maximum seconds to wait (default: 600)
       # @param poll_interval [Integer] seconds between status checks (default: 5)
-      # @param body [Hash] additional export parameters
       # @return [String] the save_path if given, otherwise the raw binary content
       #
       # @example Download PDF to disk
       #   client.web_app_scans.export('scan-123', format: 'pdf', save_path: '/tmp/report.pdf')
       #
       # @example Get raw binary content
-      #   binary = client.web_app_scans.export('scan-123', format: 'nessus')
+      #   binary = client.web_app_scans.export('scan-123', format: 'csv')
       def export(scan_id, format:, save_path: nil, timeout: DEFAULT_EXPORT_TIMEOUT,
-                 poll_interval: DEFAULT_EXPORT_POLL_INTERVAL, **body)
+                 poll_interval: DEFAULT_EXPORT_POLL_INTERVAL)
         validate_path_segment!(scan_id, name: 'scan_id')
-        export_scan(scan_id, format: format, **body)
-        wait_for_scan_export(scan_id, timeout: timeout, poll_interval: poll_interval)
-        content = download_scan_export(scan_id)
+        export_scan(scan_id, format: format)
+        wait_for_scan_export(scan_id, format: format, timeout: timeout, poll_interval: poll_interval)
+        content = download_scan_export(scan_id, format: format)
 
         if save_path
           File.binwrite(save_path, content)
@@ -299,6 +322,22 @@ module Tenable
       def export_findings_cancel(export_uuid)
         validate_path_segment!(export_uuid, name: 'export_uuid')
         post("/was/v1/export/vulns/#{export_uuid}/cancel")
+      end
+
+      private
+
+      # Validates the export format and returns the corresponding MIME type.
+      #
+      # @param format [String] the export format name
+      # @return [String] the MIME content type
+      # @raise [ArgumentError] if the format is not supported
+      def validate_export_format!(format)
+        content_type = FORMAT_CONTENT_TYPES[format]
+        unless content_type
+          raise ArgumentError, "Unsupported format '#{format}'. Must be one of: #{SUPPORTED_EXPORT_FORMATS.join(', ')}"
+        end
+
+        content_type
       end
     end
   end

@@ -16,10 +16,7 @@ RSpec.describe 'WAS export workflow', :integration do
   describe 'per-scan export flow' do
     before do
       stub_request(:put, "#{base_url}/was/v2/scans/#{scan_id}/report")
-        .with(
-          body: JSON.generate({ 'format' => 'pdf' }),
-          headers: { 'X-ApiKeys' => api_keys_header, 'Content-Type' => 'application/json' }
-        )
+        .with(headers: { 'X-ApiKeys' => api_keys_header, 'Content-Type' => 'application/pdf' })
         .to_return(
           status: 200,
           headers: { 'Content-Type' => 'application/json' },
@@ -28,7 +25,8 @@ RSpec.describe 'WAS export workflow', :integration do
 
       # GET /report is used for both status check and download
       stub_request(:get, "#{base_url}/was/v2/scans/#{scan_id}/report")
-        .with(headers: { 'X-ApiKeys' => api_keys_header })
+        .with(headers: { 'X-ApiKeys' => api_keys_header, 'Accept' => 'application/pdf',
+                         'Content-Type' => 'application/pdf' })
         .to_return(
           { status: 200, headers: { 'Content-Type' => 'application/octet-stream' }, body: 'ready' },
           { status: 200, headers: { 'Content-Type' => 'application/octet-stream' }, body: binary_content }
