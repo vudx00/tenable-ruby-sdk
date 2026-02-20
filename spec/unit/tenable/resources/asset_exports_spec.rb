@@ -22,7 +22,7 @@ RSpec.describe Tenable::Resources::AssetExports do
 
   describe '#export' do
     before do
-      stub_request(:post, 'https://cloud.tenable.com/assets/export')
+      stub_request(:post, 'https://cloud.tenable.com/assets/v2/export')
         .with(
           headers: { 'Content-Type' => 'application/json' },
           body: JSON.generate({ chunk_size: 100 })
@@ -37,7 +37,7 @@ RSpec.describe Tenable::Resources::AssetExports do
     it 'sends a POST request to /assets/export' do
       resource.export(chunk_size: 100)
 
-      expect(WebMock).to have_requested(:post, 'https://cloud.tenable.com/assets/export')
+      expect(WebMock).to have_requested(:post, 'https://cloud.tenable.com/assets/v2/export')
         .with(body: JSON.generate({ chunk_size: 100 }))
     end
 

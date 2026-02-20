@@ -7,7 +7,7 @@ module Tenable
       TERMINAL_STATUSES = %w[completed failed cancelled error].freeze
 
       # Supported scan export formats.
-      SUPPORTED_EXPORT_FORMATS = %w[pdf csv nessus].freeze
+      SUPPORTED_EXPORT_FORMATS = %w[json csv xml html pdf].freeze
 
       # @return [Integer] default seconds between status polls
       DEFAULT_POLL_INTERVAL = 2
@@ -90,17 +90,17 @@ module Tenable
         get("/was/v2/configs/#{config_id}/scans/#{scan_id}")
       end
 
-      # Retrieves findings for a scan configuration.
+      # Searches vulnerabilities for a specific scan.
       #
-      # @param config_id [String] the scan configuration ID
-      # @param params [Hash] optional query parameters for filtering
-      # @return [Hash] findings data
+      # @param scan_id [String] the scan ID
+      # @param params [Hash] search parameters
+      # @return [Hash] search results with vulnerabilities and pagination
       #
       # @example
-      #   client.web_app_scans.findings(config_id, severity: "high")
-      def findings(config_id, **params)
-        validate_path_segment!(config_id, name: 'config_id')
-        get("/was/v2/configs/#{config_id}/findings", params)
+      #   client.web_app_scans.search_scan_vulnerabilities(scan_id, severity: "high")
+      def search_scan_vulnerabilities(scan_id, **params)
+        validate_path_segment!(scan_id, name: 'scan_id')
+        post("/was/v2/scans/#{scan_id}/vulnerabilities/search", params)
       end
 
       # Polls until the scan reaches a terminal status.
@@ -135,7 +135,7 @@ module Tenable
       # @return [Hash] the updated scan status
       def stop_scan(scan_id)
         validate_path_segment!(scan_id, name: 'scan_id')
-        patch("/was/v2/scans/#{scan_id}/status", { 'status' => 'stopped' })
+        patch("/was/v2/scans/#{scan_id}", { 'requested_action' => 'stop' })
       end
 
       # Deletes a WAS scan.
@@ -147,12 +147,14 @@ module Tenable
         delete("/was/v2/scans/#{scan_id}")
       end
 
-      # Searches WAS scans.
+      # Searches scans for a specific configuration.
       #
+      # @param config_id [String] the scan configuration ID
       # @param params [Hash] search parameters
       # @return [Hash] search results with items and pagination
-      def search_scans(**params)
-        post('/was/v2/scans/search', params)
+      def search_scans(config_id, **params)
+        validate_path_segment!(config_id, name: 'config_id')
+        post("/was/v2/configs/#{config_id}/scans/search", params)
       end
 
       # Searches WAS vulnerabilities.
@@ -169,13 +171,13 @@ module Tenable
       # @return [Hash] vulnerability details
       def vulnerability_details(vuln_id)
         validate_path_segment!(vuln_id, name: 'vuln_id')
-        get("/was/v2/vulns/#{vuln_id}")
+        get("/was/v2/vulnerabilities/#{vuln_id}")
       end
 
-      # Initiates an export for a specific WAS scan.
+      # Initiates a report export for a specific WAS scan.
       #
       # @param scan_id [String] the scan ID
-      # @param format [String] export format — one of "pdf", "csv", or "nessus"
+      # @param format [String] export format — one of "json", "csv", "xml", "html", or "pdf"
       # @param body [Hash] additional export parameters
       # @return [Hash] export initiation response
       # @raise [ArgumentError] if the format is not supported
@@ -185,16 +187,25 @@ module Tenable
           raise ArgumentError, "Unsupported format '#{format}'. Must be one of: #{SUPPORTED_EXPORT_FORMATS.join(', ')}"
         end
 
-        put("/was/v2/scans/#{scan_id}/export", body.merge('format' => format))
+        put("/was/v2/scans/#{scan_id}/report", body.merge('format' => format))
       end
 
-      # Retrieves the status of a WAS scan export.
+      # Checks the status of a WAS scan report by attempting to fetch it.
+      #
+      # The WAS report API has no separate status endpoint. A 404 response
+      # indicates the report is still being generated.
       #
       # @param scan_id [String] the scan ID
       # @return [Hash] status data with +"status"+ key ("ready" or "loading")
       def export_scan_status(scan_id)
         validate_path_segment!(scan_id, name: 'scan_id')
-        get("/was/v2/scans/#{scan_id}/export/status")
+        response = @connection.faraday.get("/was/v2/scans/#{scan_id}/report")
+        if response.status == 404
+          { 'status' => 'loading' }
+        else
+          raise_for_status(response)
+          { 'status' => 'ready' }
+        end
       end
 
       # Downloads a completed WAS scan export as raw binary data.
@@ -203,7 +214,7 @@ module Tenable
       # @return [String] raw binary content of the export
       def download_scan_export(scan_id)
         validate_path_segment!(scan_id, name: 'scan_id')
-        get_raw("/was/v2/scans/#{scan_id}/export/download")
+        get_raw("/was/v2/scans/#{scan_id}/report")
       end
 
       # Polls until a WAS scan export is ready for download.

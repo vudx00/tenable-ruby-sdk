@@ -548,6 +548,21 @@ RSpec.describe Tenable::Resources::Scans do
       expect(result['history']).to be_an(Array)
       expect(result['history'].first['history_id']).to eq(1)
     end
+
+    context 'with query parameters' do
+      before do
+        stub_request(:get, "https://cloud.tenable.com/scans/#{scan_id}/history")
+          .with(query: { 'limit' => '10', 'offset' => '5' })
+          .to_return(status: 200, body: JSON.generate(response_body), headers: { 'Content-Type' => 'application/json' })
+      end
+
+      it 'passes query params to the request' do
+        resource.history(scan_id, limit: 10, offset: 5)
+
+        expect(WebMock).to have_requested(:get, "https://cloud.tenable.com/scans/#{scan_id}/history")
+          .with(query: { 'limit' => '10', 'offset' => '5' })
+      end
+    end
   end
 
   describe '#host_details' do

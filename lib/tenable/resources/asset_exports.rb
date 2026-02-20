@@ -23,7 +23,7 @@ module Tenable
       # @param body [Hash] export request parameters (e.g., +chunk_size+, +filters+)
       # @return [Hash] response containing the export UUID
       def export(body = {})
-        post('/assets/export', body)
+        post('/assets/v2/export', body)
       end
 
       # Retrieves the status of an asset export.

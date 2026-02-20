@@ -15,7 +15,7 @@ RSpec.describe 'WAS export workflow', :integration do
 
   describe 'per-scan export flow' do
     before do
-      stub_request(:put, "#{base_url}/was/v2/scans/#{scan_id}/export")
+      stub_request(:put, "#{base_url}/was/v2/scans/#{scan_id}/report")
         .with(
           body: JSON.generate({ 'format' => 'pdf' }),
           headers: { 'X-ApiKeys' => api_keys_header, 'Content-Type' => 'application/json' }
@@ -26,20 +26,12 @@ RSpec.describe 'WAS export workflow', :integration do
           body: JSON.generate({ 'scan_id' => scan_id, 'status' => 'exporting' })
         )
 
-      stub_request(:get, "#{base_url}/was/v2/scans/#{scan_id}/export/status")
+      # GET /report is used for both status check and download
+      stub_request(:get, "#{base_url}/was/v2/scans/#{scan_id}/report")
         .with(headers: { 'X-ApiKeys' => api_keys_header })
         .to_return(
-          status: 200,
-          headers: { 'Content-Type' => 'application/json' },
-          body: JSON.generate({ 'status' => 'ready' })
-        )
-
-      stub_request(:get, "#{base_url}/was/v2/scans/#{scan_id}/export/download")
-        .with(headers: { 'X-ApiKeys' => api_keys_header })
-        .to_return(
-          status: 200,
-          headers: { 'Content-Type' => 'application/octet-stream' },
-          body: binary_content
+          { status: 200, headers: { 'Content-Type' => 'application/octet-stream' }, body: 'ready' },
+          { status: 200, headers: { 'Content-Type' => 'application/octet-stream' }, body: binary_content }
         )
     end
 
@@ -52,9 +44,8 @@ RSpec.describe 'WAS export workflow', :integration do
       expect(result).to eq(tmpfile.path)
       expect(File.binread(tmpfile.path)).to eq(binary_content)
 
-      expect(WebMock).to have_requested(:put, "#{base_url}/was/v2/scans/#{scan_id}/export").once
-      expect(WebMock).to have_requested(:get, "#{base_url}/was/v2/scans/#{scan_id}/export/status").once
-      expect(WebMock).to have_requested(:get, "#{base_url}/was/v2/scans/#{scan_id}/export/download").once
+      expect(WebMock).to have_requested(:put, "#{base_url}/was/v2/scans/#{scan_id}/report").once
+      expect(WebMock).to have_requested(:get, "#{base_url}/was/v2/scans/#{scan_id}/report").times(2)
     ensure
       tmpfile&.close!
     end

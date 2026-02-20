@@ -130,22 +130,20 @@ RSpec.describe Tenable::Resources::WebAppScans do
     end
   end
 
-  describe '#findings' do
-    let(:config_id) { 'cfg-abc-123' }
+  describe '#search_scan_vulnerabilities' do
+    let(:scan_id) { 'scan-xyz-789' }
     let(:response_body) do
       {
-        'findings' => [
+        'items' => [
           {
-            'finding_id' => 'f-001',
+            'vuln_id' => 'v-001',
             'name' => 'SQL Injection',
-            'severity' => 'high',
-            'url' => 'https://app.example.com/login'
+            'severity' => 'high'
           },
           {
-            'finding_id' => 'f-002',
+            'vuln_id' => 'v-002',
             'name' => 'Cross-Site Scripting',
-            'severity' => 'medium',
-            'url' => 'https://app.example.com/search'
+            'severity' => 'medium'
           }
         ],
         'pagination' => {
@@ -157,7 +155,8 @@ RSpec.describe Tenable::Resources::WebAppScans do
     end
 
     before do
-      stub_request(:get, "https://cloud.tenable.com/was/v2/configs/#{config_id}/findings")
+      stub_request(:post, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/vulnerabilities/search")
+        .with(headers: { 'Content-Type' => 'application/json' })
         .to_return(
           status: 200,
           body: JSON.generate(response_body),
@@ -165,53 +164,28 @@ RSpec.describe Tenable::Resources::WebAppScans do
         )
     end
 
-    it 'sends a GET request to /was/v2/configs/{config_id}/findings' do
-      resource.findings(config_id)
+    it 'sends a POST request to /was/v2/scans/{scan_id}/vulnerabilities/search' do
+      resource.search_scan_vulnerabilities(scan_id, severity: 'high')
 
-      expect(WebMock).to have_requested(:get, "https://cloud.tenable.com/was/v2/configs/#{config_id}/findings")
+      expect(WebMock).to have_requested(:post, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/vulnerabilities/search")
     end
 
-    it 'returns a parsed hash with findings array and pagination' do
-      result = resource.findings(config_id)
+    it 'returns search results with items and pagination' do
+      result = resource.search_scan_vulnerabilities(scan_id)
 
       expect(result).to be_a(Hash)
-      expect(result['findings']).to be_an(Array)
-      expect(result['findings'].length).to eq(2)
+      expect(result['items']).to be_an(Array)
+      expect(result['items'].length).to eq(2)
       expect(result['pagination']['total']).to eq(15)
     end
 
-    it 'returns finding objects with expected attributes' do
-      result = resource.findings(config_id)
+    it 'returns vulnerability objects with expected attributes' do
+      result = resource.search_scan_vulnerabilities(scan_id)
 
-      finding = result['findings'].first
-      expect(finding['finding_id']).to eq('f-001')
-      expect(finding['name']).to eq('SQL Injection')
-      expect(finding['severity']).to eq('high')
-    end
-
-    context 'with pagination parameters' do
-      before do
-        stub_request(:get, "https://cloud.tenable.com/was/v2/configs/#{config_id}/findings")
-          .with(query: { 'offset' => '2', 'limit' => '5' })
-          .to_return(
-            status: 200,
-            body: JSON.generate({
-                                  'findings' => [
-                                    { 'finding_id' => 'f-003', 'name' => 'Open Redirect', 'severity' => 'low' }
-                                  ],
-                                  'pagination' => { 'total' => 15, 'offset' => 2, 'limit' => 5 }
-                                }),
-            headers: { 'Content-Type' => 'application/json' }
-          )
-      end
-
-      it 'passes pagination parameters as query params' do
-        result = resource.findings(config_id, offset: 2, limit: 5)
-
-        expect(result['findings'].length).to eq(1)
-        expect(result['pagination']['offset']).to eq(2)
-        expect(result['pagination']['limit']).to eq(5)
-      end
+      vuln = result['items'].first
+      expect(vuln['vuln_id']).to eq('v-001')
+      expect(vuln['name']).to eq('SQL Injection')
+      expect(vuln['severity']).to eq('high')
     end
   end
 
@@ -406,16 +380,16 @@ RSpec.describe Tenable::Resources::WebAppScans do
     let(:response_body) { { 'scan_id' => scan_id, 'status' => 'stopped' } }
 
     before do
-      stub_request(:patch, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/status")
-        .with(body: JSON.generate({ 'status' => 'stopped' }), headers: { 'Content-Type' => 'application/json' })
+      stub_request(:patch, "https://cloud.tenable.com/was/v2/scans/#{scan_id}")
+        .with(body: JSON.generate({ 'requested_action' => 'stop' }), headers: { 'Content-Type' => 'application/json' })
         .to_return(status: 200, body: JSON.generate(response_body), headers: { 'Content-Type' => 'application/json' })
     end
 
-    it 'sends a PATCH request with stopped status' do
+    it 'sends a PATCH request with stop action' do
       resource.stop_scan(scan_id)
 
-      expect(WebMock).to have_requested(:patch, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/status")
-        .with(body: JSON.generate({ 'status' => 'stopped' }))
+      expect(WebMock).to have_requested(:patch, "https://cloud.tenable.com/was/v2/scans/#{scan_id}")
+        .with(body: JSON.generate({ 'requested_action' => 'stop' }))
     end
 
     it 'returns the updated status' do
@@ -447,6 +421,7 @@ RSpec.describe Tenable::Resources::WebAppScans do
   end
 
   describe '#search_scans' do
+    let(:config_id) { 'cfg-abc-123' }
     let(:response_body) do
       {
         'items' => [{ 'scan_id' => 'scan-xyz-789', 'status' => 'completed' }],
@@ -455,19 +430,19 @@ RSpec.describe Tenable::Resources::WebAppScans do
     end
 
     before do
-      stub_request(:post, 'https://cloud.tenable.com/was/v2/scans/search')
+      stub_request(:post, "https://cloud.tenable.com/was/v2/configs/#{config_id}/scans/search")
         .with(headers: { 'Content-Type' => 'application/json' })
         .to_return(status: 200, body: JSON.generate(response_body), headers: { 'Content-Type' => 'application/json' })
     end
 
-    it 'sends a POST request to /was/v2/scans/search' do
-      resource.search_scans(filter: { status: 'completed' })
+    it 'sends a POST request to /was/v2/configs/{config_id}/scans/search' do
+      resource.search_scans(config_id, filter: { status: 'completed' })
 
-      expect(WebMock).to have_requested(:post, 'https://cloud.tenable.com/was/v2/scans/search')
+      expect(WebMock).to have_requested(:post, "https://cloud.tenable.com/was/v2/configs/#{config_id}/scans/search")
     end
 
     it 'returns search results' do
-      result = resource.search_scans(filter: { status: 'completed' })
+      result = resource.search_scans(config_id, filter: { status: 'completed' })
 
       expect(result['items']).to be_an(Array)
       expect(result['items'].first['scan_id']).to eq('scan-xyz-789')
@@ -508,14 +483,14 @@ RSpec.describe Tenable::Resources::WebAppScans do
     end
 
     before do
-      stub_request(:get, "https://cloud.tenable.com/was/v2/vulns/#{vuln_id}")
+      stub_request(:get, "https://cloud.tenable.com/was/v2/vulnerabilities/#{vuln_id}")
         .to_return(status: 200, body: JSON.generate(response_body), headers: { 'Content-Type' => 'application/json' })
     end
 
-    it 'sends a GET request to /was/v2/vulns/{vuln_id}' do
+    it 'sends a GET request to /was/v2/vulnerabilities/{vuln_id}' do
       resource.vulnerability_details(vuln_id)
 
-      expect(WebMock).to have_requested(:get, "https://cloud.tenable.com/was/v2/vulns/#{vuln_id}")
+      expect(WebMock).to have_requested(:get, "https://cloud.tenable.com/was/v2/vulnerabilities/#{vuln_id}")
     end
 
     it 'returns vulnerability details' do
@@ -531,15 +506,15 @@ RSpec.describe Tenable::Resources::WebAppScans do
     let(:response_body) { { 'scan_id' => scan_id, 'status' => 'exporting' } }
 
     before do
-      stub_request(:put, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/export")
+      stub_request(:put, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/report")
         .with(body: JSON.generate({ 'format' => 'pdf' }), headers: { 'Content-Type' => 'application/json' })
         .to_return(status: 200, body: JSON.generate(response_body), headers: { 'Content-Type' => 'application/json' })
     end
 
-    it 'sends a PUT request to /was/v2/scans/{scan_id}/export with format' do
+    it 'sends a PUT request to /was/v2/scans/{scan_id}/report with format' do
       resource.export_scan(scan_id, format: 'pdf')
 
-      expect(WebMock).to have_requested(:put, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/export")
+      expect(WebMock).to have_requested(:put, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/report")
         .with(body: JSON.generate({ 'format' => 'pdf' }))
     end
 
@@ -550,30 +525,38 @@ RSpec.describe Tenable::Resources::WebAppScans do
     end
 
     it 'raises ArgumentError for unsupported format' do
-      expect { resource.export_scan(scan_id, format: 'xml') }
-        .to raise_error(ArgumentError, /Unsupported format 'xml'/)
+      expect { resource.export_scan(scan_id, format: 'nessus') }
+        .to raise_error(ArgumentError, /Unsupported format 'nessus'/)
     end
   end
 
   describe '#export_scan_status' do
     let(:scan_id) { 'scan-xyz-789' }
-    let(:response_body) { { 'status' => 'ready' } }
 
-    before do
-      stub_request(:get, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/export/status")
-        .to_return(status: 200, body: JSON.generate(response_body), headers: { 'Content-Type' => 'application/json' })
+    context 'when report is ready' do
+      before do
+        stub_request(:get, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/report")
+          .to_return(status: 200, body: 'report content', headers: { 'Content-Type' => 'application/octet-stream' })
+      end
+
+      it 'returns ready status when the report endpoint returns 200' do
+        result = resource.export_scan_status(scan_id)
+
+        expect(result['status']).to eq('ready')
+      end
     end
 
-    it 'sends a GET request to the export status endpoint' do
-      resource.export_scan_status(scan_id)
+    context 'when report is not ready' do
+      before do
+        stub_request(:get, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/report")
+          .to_return(status: 404, body: '', headers: { 'Content-Type' => 'application/json' })
+      end
 
-      expect(WebMock).to have_requested(:get, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/export/status")
-    end
+      it 'returns loading status when the report endpoint returns 404' do
+        result = resource.export_scan_status(scan_id)
 
-    it 'returns status data' do
-      result = resource.export_scan_status(scan_id)
-
-      expect(result['status']).to eq('ready')
+        expect(result['status']).to eq('loading')
+      end
     end
   end
 
@@ -582,12 +565,10 @@ RSpec.describe Tenable::Resources::WebAppScans do
 
     context 'when export becomes ready after polling' do
       before do
-        stub_request(:get, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/export/status")
+        stub_request(:get, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/report")
           .to_return(
-            { status: 200, body: JSON.generate({ 'status' => 'loading' }),
-              headers: { 'Content-Type' => 'application/json' } },
-            { status: 200, body: JSON.generate({ 'status' => 'ready' }),
-              headers: { 'Content-Type' => 'application/json' } }
+            { status: 404, body: '', headers: { 'Content-Type' => 'application/json' } },
+            { status: 200, body: 'report content', headers: { 'Content-Type' => 'application/octet-stream' } }
           )
       end
 
@@ -595,17 +576,14 @@ RSpec.describe Tenable::Resources::WebAppScans do
         result = resource.wait_for_scan_export(scan_id, timeout: 30, poll_interval: 0)
 
         expect(result['status']).to eq('ready')
-        expect(WebMock).to have_requested(:get, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/export/status").times(2)
+        expect(WebMock).to have_requested(:get, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/report").times(2)
       end
     end
 
     context 'when export times out' do
       before do
-        stub_request(:get, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/export/status")
-          .to_return(
-            status: 200, body: JSON.generate({ 'status' => 'loading' }),
-            headers: { 'Content-Type' => 'application/json' }
-          )
+        stub_request(:get, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/report")
+          .to_return(status: 404, body: '', headers: { 'Content-Type' => 'application/json' })
       end
 
       it 'raises TimeoutError' do
@@ -620,26 +598,25 @@ RSpec.describe Tenable::Resources::WebAppScans do
     let(:binary_content) { "\x50\x4B\x03\x04 fake pdf content" }
 
     before do
-      stub_request(:put, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/export")
+      stub_request(:put, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/report")
         .with(body: JSON.generate({ 'format' => 'pdf' }), headers: { 'Content-Type' => 'application/json' })
         .to_return(status: 200, body: JSON.generate({ 'status' => 'exporting' }),
                    headers: { 'Content-Type' => 'application/json' })
 
-      stub_request(:get, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/export/status")
-        .to_return(status: 200, body: JSON.generate({ 'status' => 'ready' }),
-                   headers: { 'Content-Type' => 'application/json' })
-
-      stub_request(:get, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/export/download")
-        .to_return(status: 200, body: binary_content, headers: { 'Content-Type' => 'application/octet-stream' })
+      # First call for status check (returns ready), second call for download
+      stub_request(:get, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/report")
+        .to_return(
+          { status: 200, body: 'ready', headers: { 'Content-Type' => 'application/octet-stream' } },
+          { status: 200, body: binary_content, headers: { 'Content-Type' => 'application/octet-stream' } }
+        )
     end
 
     it 'chains export_scan, wait, and download returning binary content' do
       result = resource.export(scan_id, format: 'pdf', timeout: 30, poll_interval: 0)
 
       expect(result).to eq(binary_content)
-      expect(WebMock).to have_requested(:put, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/export").once
-      expect(WebMock).to have_requested(:get, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/export/status").once
-      expect(WebMock).to have_requested(:get, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/export/download").once
+      expect(WebMock).to have_requested(:put, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/report").once
+      expect(WebMock).to have_requested(:get, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/report").times(2)
     end
 
     context 'with save_path' do
@@ -661,14 +638,14 @@ RSpec.describe Tenable::Resources::WebAppScans do
     let(:binary_content) { "\x50\x4B\x03\x04 fake zip content" }
 
     before do
-      stub_request(:get, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/export/download")
+      stub_request(:get, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/report")
         .to_return(status: 200, body: binary_content, headers: { 'Content-Type' => 'application/octet-stream' })
     end
 
-    it 'sends a GET request to the download endpoint' do
+    it 'sends a GET request to the report endpoint' do
       resource.download_scan_export(scan_id)
 
-      expect(WebMock).to have_requested(:get, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/export/download")
+      expect(WebMock).to have_requested(:get, "https://cloud.tenable.com/was/v2/scans/#{scan_id}/report")
     end
 
     it 'returns raw binary content' do
