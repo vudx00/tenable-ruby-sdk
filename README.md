@@ -2,7 +2,7 @@
 
 > **Unofficial** — This project is not affiliated with, endorsed by, or sponsored by Tenable, Inc. "Tenable" is a registered trademark of Tenable, Inc.
 
-Ruby client for the [Tenable.io API](https://developer.tenable.com/reference/navigate). Covers vulnerability management, bulk exports, VM scans, and WAS v2 web application scanning.
+Ruby SDK for the [Tenable.io API](https://developer.tenable.com/reference/navigate). Covers vulnerability management, bulk exports, VM scans, and WAS v2 web application scanning.
 
 Requires Ruby >= 3.2. Uses [Faraday](https://github.com/lostisland/faraday) for HTTP.
 
