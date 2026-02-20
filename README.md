@@ -1,8 +1,10 @@
 # tenable-ruby-sdk
 
+> **Unofficial** — This project is not affiliated with, endorsed by, or sponsored by Tenable, Inc. "Tenable" is a registered trademark of Tenable, Inc.
+
 Ruby client for the [Tenable.io API](https://developer.tenable.com/reference/navigate). Covers vulnerability management, bulk exports, VM scans, and WAS v2 web application scanning.
 
-Requires Ruby >= 3.1. Uses [Faraday](https://github.com/lostisland/faraday) for HTTP.
+Requires Ruby >= 3.2. Uses [Faraday](https://github.com/lostisland/faraday) for HTTP.
 
 ## Installation
 
@@ -145,7 +147,7 @@ Rate limiting (429) and server errors (5xx) are retried automatically with expon
 
 ## Thread Safety
 
-The client is frozen after initialization. Each call to a resource accessor (e.g., `client.vulnerabilities`) returns a new instance, so there's no shared mutable state. Safe to use across threads.
+The client is frozen after initialization with eagerly instantiated resources. Safe to use across threads.
 
 ## Development
 
