@@ -3,9 +3,12 @@
 module Tenable
   # Provides lazy, offset-based pagination over API list endpoints.
   #
-  # Fetches pages on demand and yields individual items via a lazy enumerator,
+  # Fetches pages on demand and yields individual items via {#each},
   # keeping memory usage constant regardless of total result count.
+  # Includes Enumerable for standard collection methods.
   class Pagination
+    include Enumerable
+
     # @return [Integer] maximum items per page
     MAX_PAGE_SIZE = 200
 
@@ -21,34 +24,42 @@ module Tenable
       @fetcher = fetcher
     end
 
+    # Iterates over all paginated items.
+    #
+    # @yield [item] yields each item
+    # @return [Enumerator] if no block is given
+    #
+    # @example Iterate over all results
+    #   paginator = Tenable::Pagination.new { |offset, limit| fetch_page(offset, limit) }
+    #   paginator.each { |item| process(item) }
+    #
+    # @example Use Enumerable methods
+    #   paginator.first(10)
+    #   paginator.select { |item| item['severity'] > 2 }
+    def each(&block)
+      return enum_for(:each) unless block
+
+      offset = 0
+      loop do
+        page = @fetcher.call(offset, @limit)
+        items = extract_items(page)
+        total = extract_total(page)
+
+        items.each(&block)
+
+        offset += @limit
+        break if offset >= total || items.empty?
+      end
+    end
+
     # Returns a lazy enumerator over all paginated items.
     #
-    # @return [Enumerator::Lazy] lazy enumerator yielding individual items
-    #
-    # @example Iterate over all results lazily
-    #   paginator = Tenable::Pagination.new { |offset, limit| fetch_page(offset, limit) }
-    #   paginator.each.first(10)
-    def each
-      Enumerator::Lazy.new(raw_enumerator) { |yielder, item| yielder << item }
+    # @return [Enumerator::Lazy]
+    def lazy
+      each.lazy
     end
 
     private
-
-    def raw_enumerator
-      Enumerator.new do |yielder|
-        offset = 0
-        loop do
-          page = @fetcher.call(offset, @limit)
-          items = extract_items(page)
-          total = extract_total(page)
-
-          items.each { |item| yielder << item }
-
-          offset += @limit
-          break if offset >= total || items.empty?
-        end
-      end
-    end
 
     def extract_items(page)
       page[:items] || page['items'] || []

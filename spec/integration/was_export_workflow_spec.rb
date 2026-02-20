@@ -47,7 +47,7 @@ RSpec.describe 'WAS export workflow', :integration do
       tmpfile = Tempfile.new(['was_export', '.pdf'])
 
       result = client.web_app_scans.export(scan_id, format: 'pdf', save_path: tmpfile.path,
-                                                     timeout: 30, poll_interval: 0)
+                                                    timeout: 30, poll_interval: 0)
 
       expect(result).to eq(tmpfile.path)
       expect(File.binread(tmpfile.path)).to eq(binary_content)

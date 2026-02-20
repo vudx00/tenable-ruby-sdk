@@ -3,13 +3,27 @@
 require 'spec_helper'
 
 RSpec.describe Tenable::Pagination do
+  it 'includes Enumerable' do
+    expect(described_class.ancestors).to include(Enumerable)
+  end
+
   describe '#each' do
-    it 'returns a lazy Enumerator' do
+    it 'returns an Enumerator when no block is given' do
       paginator = described_class.new(limit: 10) do |_offset, _limit|
         { total: 0, items: [] }
       end
 
-      expect(paginator.each).to be_a(Enumerator::Lazy)
+      expect(paginator.each).to be_a(Enumerator)
+    end
+
+    it 'yields items when given a block' do
+      paginator = described_class.new(limit: 10) do |_offset, _limit|
+        { total: 3, items: %w[a b c] }
+      end
+
+      collected = paginator.map { |item| item }
+
+      expect(collected).to eq(%w[a b c])
     end
 
     it 'auto-fetches next page when offset < total' do
@@ -57,6 +71,14 @@ RSpec.describe Tenable::Pagination do
       results = paginator.each.to_a
 
       expect(results).to be_empty
+    end
+
+    it 'supports lazy enumeration' do
+      paginator = described_class.new(limit: 10) do |_offset, _limit|
+        { total: 3, items: %w[a b c] }
+      end
+
+      expect(paginator.lazy).to be_a(Enumerator::Lazy)
     end
 
     it 'caps the page size at a maximum of 200' do

@@ -23,6 +23,7 @@ module Tenable
       # @param params [Hash] optional query parameters
       # @return [Hash] vulnerability info data
       def info(plugin_id, params = {})
+        validate_path_segment!(plugin_id, name: 'plugin_id')
         get("/workbenches/vulnerabilities/#{plugin_id}/info", params)
       end
 
@@ -32,6 +33,7 @@ module Tenable
       # @param params [Hash] optional query parameters
       # @return [Hash] plugin output data
       def outputs(plugin_id, params = {})
+        validate_path_segment!(plugin_id, name: 'plugin_id')
         get("/workbenches/vulnerabilities/#{plugin_id}/outputs", params)
       end
 
@@ -49,6 +51,7 @@ module Tenable
       # @param params [Hash] optional query parameters
       # @return [Hash] asset info data
       def asset_info(asset_id, params = {})
+        validate_path_segment!(asset_id, name: 'asset_id')
         get("/workbenches/assets/#{asset_id}/info", params)
       end
 
@@ -58,6 +61,7 @@ module Tenable
       # @param params [Hash] optional query parameters
       # @return [Hash] vulnerability data for the asset
       def asset_vulnerabilities(asset_id, params = {})
+        validate_path_segment!(asset_id, name: 'asset_id')
         get("/workbenches/assets/#{asset_id}/vulnerabilities", params)
       end
     end

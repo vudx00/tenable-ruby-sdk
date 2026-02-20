@@ -213,4 +213,44 @@ RSpec.describe Tenable::Resources::Base do
         .to raise_error(Tenable::ApiError)
     end
   end
+
+  describe '#validate_path_segment!' do
+    let(:resource_with_validation) do
+      Class.new(described_class) do
+        def check_segment(value, name: 'id')
+          validate_path_segment!(value, name: name)
+        end
+      end
+    end
+
+    let(:validator) { resource_with_validation.new(connection) }
+
+    it 'accepts a simple string ID' do
+      expect { validator.check_segment('abc-123') }.not_to raise_error
+    end
+
+    it 'accepts an integer ID' do
+      expect { validator.check_segment(42) }.not_to raise_error
+    end
+
+    it 'rejects IDs containing /' do
+      expect { validator.check_segment('abc/def') }
+        .to raise_error(ArgumentError, /unsafe characters/)
+    end
+
+    it 'rejects IDs containing ..' do
+      expect { validator.check_segment('../evil') }
+        .to raise_error(ArgumentError, /unsafe characters/)
+    end
+
+    it 'rejects empty strings' do
+      expect { validator.check_segment('') }
+        .to raise_error(ArgumentError, /unsafe characters/)
+    end
+
+    it 'includes the parameter name in the error message' do
+      expect { validator.check_segment('../evil', name: 'scan_id') }
+        .to raise_error(ArgumentError, /scan_id/)
+    end
+  end
 end

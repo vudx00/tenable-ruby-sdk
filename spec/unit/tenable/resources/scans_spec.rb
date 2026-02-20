@@ -281,8 +281,10 @@ RSpec.describe Tenable::Resources::Scans do
     it 'polls until status is ready' do
       stub_request(:get, "https://cloud.tenable.com/scans/#{scan_id}/export/#{file_id}/status")
         .to_return(
-          { status: 200, body: JSON.generate('status' => 'loading'), headers: { 'Content-Type' => 'application/json' } },
-          { status: 200, body: JSON.generate('status' => 'loading'), headers: { 'Content-Type' => 'application/json' } },
+          { status: 200, body: JSON.generate('status' => 'loading'),
+            headers: { 'Content-Type' => 'application/json' } },
+          { status: 200, body: JSON.generate('status' => 'loading'),
+            headers: { 'Content-Type' => 'application/json' } },
           { status: 200, body: JSON.generate('status' => 'ready'), headers: { 'Content-Type' => 'application/json' } }
         )
 
@@ -301,14 +303,7 @@ RSpec.describe Tenable::Resources::Scans do
           headers: { 'Content-Type' => 'application/json' }
         )
 
-      allow(resource).to receive(:sleep)
-      allow(Time).to receive(:now).and_return(
-        Time.at(0),     # deadline calculation
-        Time.at(0),     # first loop check
-        Time.at(1000)   # second loop check — past deadline
-      )
-
-      expect { resource.wait_for_export(scan_id, file_id, timeout: 10, poll_interval: 1) }
+      expect { resource.wait_for_export(scan_id, file_id, timeout: 0, poll_interval: 0) }
         .to raise_error(Tenable::TimeoutError, /timed out/)
     end
   end
