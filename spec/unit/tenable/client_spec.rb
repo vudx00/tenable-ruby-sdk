@@ -67,6 +67,10 @@ RSpec.describe Tenable::Client do
     it 'returns a WebAppScans resource' do
       expect(client.web_app_scans).to be_a(Tenable::Resources::WebAppScans)
     end
+
+    it 'returns the same Vulnerabilities instance on repeated calls' do
+      expect(client.vulnerabilities).to equal(client.vulnerabilities)
+    end
   end
 
   describe 'thread safety' do

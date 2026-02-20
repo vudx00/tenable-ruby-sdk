@@ -3,7 +3,7 @@
 require 'spec_helper'
 
 RSpec.describe Tenable::Models::WebAppScan do
-  subject(:web_app_scan) { described_class.new(attributes) }
+  subject(:web_app_scan) { described_class.from_api(attributes) }
 
   context 'when initialized with all attributes' do
     let(:attributes) do

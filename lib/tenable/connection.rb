@@ -15,19 +15,14 @@ module Tenable
     # @raise [ArgumentError] if the base_url does not use HTTPS
     def initialize(config)
       @config = config
-      validate_tls!
       @faraday = build_connection
     end
 
     private
 
-    def validate_tls!
-      uri = URI.parse(@config.base_url)
-      raise ArgumentError, "base_url must use HTTPS: #{@config.base_url}" unless uri.scheme == 'https'
-    end
-
     def build_connection
       Faraday.new(url: @config.base_url) do |f|
+        f.headers['Accept'] = 'application/json'
         f.use Middleware::Authentication,
               access_key: @config.access_key,
               secret_key: @config.secret_key

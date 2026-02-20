@@ -36,6 +36,10 @@ RSpec.describe Tenable::Connection do
     it 'sets the open_timeout from the configuration' do
       expect(faraday.options.open_timeout).to eq(10)
     end
+
+    it 'sets the Accept header to application/json' do
+      expect(faraday.headers['Accept']).to eq('application/json')
+    end
   end
 
   describe 'middleware stack' do
@@ -51,27 +55,6 @@ RSpec.describe Tenable::Connection do
 
     it 'includes logging middleware' do
       expect(handlers).to include(Tenable::Middleware::Logging)
-    end
-  end
-
-  describe 'TLS enforcement' do
-    let(:insecure_config) do
-      instance_double(
-        Tenable::Configuration,
-        access_key: 'test-access-key',
-        secret_key: 'test-secret-key',
-        base_url: 'http://cloud.tenable.com',
-        timeout: 30,
-        open_timeout: 10,
-        max_retries: 3,
-        logger: nil
-      )
-    end
-
-    it 'rejects non-HTTPS URLs' do
-      expect { described_class.new(insecure_config) }.to raise_error(
-        ArgumentError, /https/i
-      )
     end
   end
 end

@@ -233,7 +233,8 @@ RSpec.describe Tenable::Resources::WebAppScans do
       end
 
       it 'polls until the scan status is completed' do
-        result = resource.wait_until_complete(config_id, scan_id)
+        allow(resource).to receive(:sleep)
+        result = resource.wait_until_complete(config_id, scan_id, timeout: 60, poll_interval: 0)
 
         expect(result['status']).to eq('completed')
         expect(WebMock).to have_requested(:get, "https://cloud.tenable.com/was/v2/configs/#{config_id}/scans/#{scan_id}").times(3)
@@ -252,10 +253,26 @@ RSpec.describe Tenable::Resources::WebAppScans do
       end
 
       it 'returns when status is a terminal state' do
-        result = resource.wait_until_complete(config_id, scan_id)
+        allow(resource).to receive(:sleep)
+        result = resource.wait_until_complete(config_id, scan_id, timeout: 60, poll_interval: 0)
 
         expect(result['status']).to eq('failed')
         expect(WebMock).to have_requested(:get, "https://cloud.tenable.com/was/v2/configs/#{config_id}/scans/#{scan_id}").times(2)
+      end
+    end
+
+    context 'when scan times out' do
+      before do
+        stub_request(:get, "https://cloud.tenable.com/was/v2/configs/#{config_id}/scans/#{scan_id}")
+          .to_return(
+            status: 200, body: JSON.generate({ 'status' => 'scanning' }),
+            headers: { 'Content-Type' => 'application/json' }
+          )
+      end
+
+      it 'raises TimeoutError' do
+        expect { resource.wait_until_complete(config_id, scan_id, timeout: 0, poll_interval: 0) }
+          .to raise_error(Tenable::TimeoutError, /timed out/)
       end
     end
   end

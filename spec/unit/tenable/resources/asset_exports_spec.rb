@@ -128,8 +128,8 @@ RSpec.describe Tenable::Resources::AssetExports do
   end
 
   describe '#each' do
-    let(:chunk_0) { [{ 'id' => 'asset-001' }] }
-    let(:chunk_1) { [{ 'id' => 'asset-002' }, { 'id' => 'asset-003' }] }
+    let(:first_chunk) { [{ 'id' => 'asset-001' }] }
+    let(:second_chunk) { [{ 'id' => 'asset-002' }, { 'id' => 'asset-003' }] }
 
     before do
       stub_request(:get, "https://cloud.tenable.com/assets/export/#{export_uuid}/status")
@@ -140,10 +140,10 @@ RSpec.describe Tenable::Resources::AssetExports do
         )
 
       stub_request(:get, "https://cloud.tenable.com/assets/export/#{export_uuid}/chunks/0")
-        .to_return(status: 200, body: JSON.generate(chunk_0), headers: { 'Content-Type' => 'application/json' })
+        .to_return(status: 200, body: JSON.generate(first_chunk), headers: { 'Content-Type' => 'application/json' })
 
       stub_request(:get, "https://cloud.tenable.com/assets/export/#{export_uuid}/chunks/1")
-        .to_return(status: 200, body: JSON.generate(chunk_1), headers: { 'Content-Type' => 'application/json' })
+        .to_return(status: 200, body: JSON.generate(second_chunk), headers: { 'Content-Type' => 'application/json' })
     end
 
     it 'yields all asset records from all chunks' do
@@ -184,6 +184,44 @@ RSpec.describe Tenable::Resources::AssetExports do
 
       expect { resource.wait_for_completion(export_uuid, timeout: 60) }
         .to raise_error(Tenable::ApiError, /#{export_uuid}/)
+    end
+  end
+
+  describe '#each without a block' do
+    before do
+      stub_request(:get, "https://cloud.tenable.com/assets/export/#{export_uuid}/status")
+        .to_return(
+          status: 200,
+          body: JSON.generate({ 'status' => 'FINISHED', 'chunks_available' => [0] }),
+          headers: { 'Content-Type' => 'application/json' }
+        )
+
+      stub_request(:get, "https://cloud.tenable.com/assets/export/#{export_uuid}/chunks/0")
+        .to_return(
+          status: 200,
+          body: JSON.generate([{ 'id' => 'asset-001' }]),
+          headers: { 'Content-Type' => 'application/json' }
+        )
+    end
+
+    it 'returns an Enumerator when no block is given' do
+      result = resource.each(export_uuid)
+
+      expect(result).to be_an(Enumerator)
+    end
+
+    it 'enumerates records via the returned Enumerator' do
+      records = resource.each(export_uuid).to_a
+
+      expect(records.length).to eq(1)
+      expect(records.first['id']).to eq('asset-001')
+    end
+  end
+
+  describe 'path validation' do
+    it 'rejects traversal attempts in export_uuid' do
+      expect { resource.status('../evil') }
+        .to raise_error(ArgumentError, /unsafe characters/)
     end
   end
 end

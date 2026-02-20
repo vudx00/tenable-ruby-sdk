@@ -266,4 +266,42 @@ RSpec.describe Tenable::Resources::Exports do
       expect(error.message).to include(export_uuid)
     end
   end
+
+  describe '#each without a block' do
+    before do
+      stub_request(:get, "https://cloud.tenable.com/vulns/export/#{export_uuid}/status")
+        .to_return(
+          status: 200,
+          body: JSON.generate({ 'status' => 'FINISHED', 'chunks_available' => [0] }),
+          headers: { 'Content-Type' => 'application/json' }
+        )
+
+      stub_request(:get, "https://cloud.tenable.com/vulns/export/#{export_uuid}/chunks/0")
+        .to_return(
+          status: 200,
+          body: JSON.generate([{ 'plugin' => { 'id' => 1 } }]),
+          headers: { 'Content-Type' => 'application/json' }
+        )
+    end
+
+    it 'returns an Enumerator when no block is given' do
+      result = resource.each(export_uuid)
+
+      expect(result).to be_an(Enumerator)
+    end
+
+    it 'enumerates records via the returned Enumerator' do
+      records = resource.each(export_uuid).to_a
+
+      expect(records.length).to eq(1)
+      expect(records.first['plugin']['id']).to eq(1)
+    end
+  end
+
+  describe 'path validation' do
+    it 'rejects traversal attempts in export_uuid' do
+      expect { resource.status('../evil') }
+        .to raise_error(ArgumentError, /unsafe characters/)
+    end
+  end
 end

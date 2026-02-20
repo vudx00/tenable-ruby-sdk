@@ -21,7 +21,7 @@ RSpec.describe Tenable::Models::Export do
   end
 
   describe 'initialization from a hash' do
-    subject(:export) { described_class.new(full_hash) }
+    subject(:export) { described_class.from_api(full_hash) }
 
     it 'sets uuid' do
       expect(export.uuid).to eq('export-uuid-1234-5678-abcdef')
@@ -48,7 +48,7 @@ RSpec.describe Tenable::Models::Export do
   end
 
   describe 'defaults for missing attributes' do
-    subject(:export) { described_class.new(minimal_hash) }
+    subject(:export) { described_class.from_api(minimal_hash) }
 
     it 'defaults chunks_available to an empty Array' do
       expect(export.chunks_available).to eq([])
@@ -66,7 +66,7 @@ RSpec.describe Tenable::Models::Export do
   describe 'status values' do
     %w[QUEUED PROCESSING FINISHED ERROR CANCELLED].each do |status_value|
       it "accepts #{status_value} as a valid status" do
-        export = described_class.new('uuid' => 'test-uuid', 'status' => status_value)
+        export = described_class.from_api('uuid' => 'test-uuid', 'status' => status_value)
         expect(export.status).to eq(status_value)
       end
     end
@@ -75,48 +75,48 @@ RSpec.describe Tenable::Models::Export do
   describe 'helper methods' do
     describe '#finished?' do
       it 'returns true when status is FINISHED' do
-        export = described_class.new('uuid' => 'test', 'status' => 'FINISHED')
+        export = described_class.from_api('uuid' => 'test', 'status' => 'FINISHED')
         expect(export.finished?).to be true
       end
 
       it 'returns false when status is not FINISHED' do
-        export = described_class.new('uuid' => 'test', 'status' => 'PROCESSING')
+        export = described_class.from_api('uuid' => 'test', 'status' => 'PROCESSING')
         expect(export.finished?).to be false
       end
     end
 
     describe '#processing?' do
       it 'returns true when status is PROCESSING' do
-        export = described_class.new('uuid' => 'test', 'status' => 'PROCESSING')
+        export = described_class.from_api('uuid' => 'test', 'status' => 'PROCESSING')
         expect(export.processing?).to be true
       end
 
       it 'returns false when status is not PROCESSING' do
-        export = described_class.new('uuid' => 'test', 'status' => 'FINISHED')
+        export = described_class.from_api('uuid' => 'test', 'status' => 'FINISHED')
         expect(export.processing?).to be false
       end
     end
 
     describe '#error?' do
       it 'returns true when status is ERROR' do
-        export = described_class.new('uuid' => 'test', 'status' => 'ERROR')
+        export = described_class.from_api('uuid' => 'test', 'status' => 'ERROR')
         expect(export.error?).to be true
       end
 
       it 'returns false when status is not ERROR' do
-        export = described_class.new('uuid' => 'test', 'status' => 'FINISHED')
+        export = described_class.from_api('uuid' => 'test', 'status' => 'FINISHED')
         expect(export.error?).to be false
       end
     end
 
     describe '#queued?' do
       it 'returns true when status is QUEUED' do
-        export = described_class.new('uuid' => 'test', 'status' => 'QUEUED')
+        export = described_class.from_api('uuid' => 'test', 'status' => 'QUEUED')
         expect(export.queued?).to be true
       end
 
       it 'returns false when status is not QUEUED' do
-        export = described_class.new('uuid' => 'test', 'status' => 'FINISHED')
+        export = described_class.from_api('uuid' => 'test', 'status' => 'FINISHED')
         expect(export.queued?).to be false
       end
     end

@@ -40,6 +40,7 @@ module Tenable
       # @param scan_id [Integer, String] the scan ID
       # @return [Hash] response containing the scan instance UUID
       def launch(scan_id)
+        validate_path_segment!(scan_id, name: 'scan_id')
         post("/scans/#{scan_id}/launch")
       end
 
@@ -48,6 +49,7 @@ module Tenable
       # @param scan_id [Integer, String] the scan ID
       # @return [Hash] detailed scan data
       def details(scan_id)
+        validate_path_segment!(scan_id, name: 'scan_id')
         get("/scans/#{scan_id}")
       end
 
@@ -57,6 +59,7 @@ module Tenable
       # @param params [Hash] scan configuration to update
       # @return [Hash] the updated scan data
       def update(scan_id, params)
+        validate_path_segment!(scan_id, name: 'scan_id')
         put("/scans/#{scan_id}", params)
       end
 
@@ -65,6 +68,7 @@ module Tenable
       # @param scan_id [Integer, String] the scan ID
       # @return [Hash, nil] parsed response or nil
       def destroy(scan_id)
+        validate_path_segment!(scan_id, name: 'scan_id')
         delete("/scans/#{scan_id}")
       end
 
@@ -73,6 +77,7 @@ module Tenable
       # @param scan_id [Integer, String] the scan ID
       # @return [Hash] status data for the scan
       def status(scan_id)
+        validate_path_segment!(scan_id, name: 'scan_id')
         get("/scans/#{scan_id}/latest-status")
       end
 
@@ -81,6 +86,7 @@ module Tenable
       # @param scan_id [Integer, String] the scan ID
       # @return [Hash, nil] parsed response
       def pause(scan_id)
+        validate_path_segment!(scan_id, name: 'scan_id')
         post("/scans/#{scan_id}/pause")
       end
 
@@ -89,6 +95,7 @@ module Tenable
       # @param scan_id [Integer, String] the scan ID
       # @return [Hash, nil] parsed response
       def resume(scan_id)
+        validate_path_segment!(scan_id, name: 'scan_id')
         post("/scans/#{scan_id}/resume")
       end
 
@@ -97,6 +104,7 @@ module Tenable
       # @param scan_id [Integer, String] the scan ID
       # @return [Hash, nil] parsed response
       def stop(scan_id)
+        validate_path_segment!(scan_id, name: 'scan_id')
         post("/scans/#{scan_id}/stop")
       end
 
@@ -105,6 +113,7 @@ module Tenable
       # @param scan_id [Integer, String] the scan ID
       # @return [Hash] the copied scan data
       def copy(scan_id)
+        validate_path_segment!(scan_id, name: 'scan_id')
         post("/scans/#{scan_id}/copy")
       end
 
@@ -114,6 +123,7 @@ module Tenable
       # @param params [Hash] schedule configuration
       # @return [Hash] the updated schedule data
       def schedule(scan_id, params)
+        validate_path_segment!(scan_id, name: 'scan_id')
         put("/scans/#{scan_id}/schedule", params)
       end
 
@@ -122,6 +132,7 @@ module Tenable
       # @param scan_id [Integer, String] the scan ID
       # @return [Hash] history data including an array of history records
       def history(scan_id)
+        validate_path_segment!(scan_id, name: 'scan_id')
         get("/scans/#{scan_id}/history")
       end
 
@@ -131,6 +142,8 @@ module Tenable
       # @param host_id [Integer, String] the host ID
       # @return [Hash] host details including vulnerability info
       def host_details(scan_id, host_id)
+        validate_path_segment!(scan_id, name: 'scan_id')
+        validate_path_segment!(host_id, name: 'host_id')
         get("/scans/#{scan_id}/hosts/#{host_id}")
       end
 
@@ -141,6 +154,9 @@ module Tenable
       # @param plugin_id [Integer, String] the plugin ID
       # @return [Hash] plugin output data
       def plugin_output(scan_id, host_id, plugin_id)
+        validate_path_segment!(scan_id, name: 'scan_id')
+        validate_path_segment!(host_id, name: 'host_id')
+        validate_path_segment!(plugin_id, name: 'plugin_id')
         get("/scans/#{scan_id}/hosts/#{host_id}/plugins/#{plugin_id}")
       end
 
@@ -155,6 +171,7 @@ module Tenable
       # @example
       #   client.scans.export_request(123, format: 'pdf', chapters: 'vuln_hosts_summary')
       def export_request(scan_id, format:, **body)
+        validate_path_segment!(scan_id, name: 'scan_id')
         unless SUPPORTED_EXPORT_FORMATS.include?(format)
           raise ArgumentError, "Unsupported format '#{format}'. Must be one of: #{SUPPORTED_EXPORT_FORMATS.join(', ')}"
         end
@@ -168,6 +185,8 @@ module Tenable
       # @param file_id [Integer, String] the export file ID
       # @return [Hash] status data with +"status"+ key ("ready" or "loading")
       def export_status(scan_id, file_id)
+        validate_path_segment!(scan_id, name: 'scan_id')
+        validate_path_segment!(file_id, name: 'file_id')
         get("/scans/#{scan_id}/export/#{file_id}/status")
       end
 
@@ -177,6 +196,8 @@ module Tenable
       # @param file_id [Integer, String] the export file ID
       # @return [String] raw binary content of the export file
       def export_download(scan_id, file_id)
+        validate_path_segment!(scan_id, name: 'scan_id')
+        validate_path_segment!(file_id, name: 'file_id')
         get_raw("/scans/#{scan_id}/export/#{file_id}/download")
       end
 
@@ -188,15 +209,13 @@ module Tenable
       # @param poll_interval [Integer] seconds between status checks (default: 5)
       # @return [Hash] the final status data when export is ready
       # @raise [Tenable::TimeoutError] if the export does not become ready within the timeout
-      def wait_for_export(scan_id, file_id, timeout: DEFAULT_EXPORT_TIMEOUT, poll_interval: DEFAULT_EXPORT_POLL_INTERVAL)
-        deadline = Time.now + timeout
-        loop do
-          raise Tenable::TimeoutError, "Scan export #{file_id} timed out" if Time.now >= deadline
-
+      def wait_for_export(scan_id, file_id, timeout: DEFAULT_EXPORT_TIMEOUT,
+                          poll_interval: DEFAULT_EXPORT_POLL_INTERVAL)
+        validate_path_segment!(scan_id, name: 'scan_id')
+        validate_path_segment!(file_id, name: 'file_id')
+        poll_until(timeout: timeout, poll_interval: poll_interval, label: "Scan export #{file_id}") do
           status_data = export_status(scan_id, file_id)
-          return status_data if status_data['status'] == 'ready'
-
-          sleep(poll_interval)
+          status_data if status_data['status'] == 'ready'
         end
       end
 
@@ -204,7 +223,9 @@ module Tenable
       #
       # @param scan_id [Integer, String] the scan ID
       # @param format [String] export format — one of "pdf", "csv", or "nessus"
-      # @param save_path [String, nil] if provided, writes binary content to this file path
+      # @param save_path [String, nil] if provided, writes binary content to this file path.
+      #   The caller is responsible for ensuring the path is safe and writable.
+      #   This value is used as-is with +File.binwrite+ — no sanitization is performed.
       # @param timeout [Integer] maximum seconds to wait (default: 600)
       # @param poll_interval [Integer] seconds between status checks (default: 5)
       # @param body [Hash] additional export parameters
@@ -217,6 +238,7 @@ module Tenable
       #   binary = client.scans.export(123, format: 'nessus')
       def export(scan_id, format:, save_path: nil, timeout: DEFAULT_EXPORT_TIMEOUT,
                  poll_interval: DEFAULT_EXPORT_POLL_INTERVAL, **body)
+        validate_path_segment!(scan_id, name: 'scan_id')
         result = export_request(scan_id, format: format, **body)
         file_id = result['file']
         wait_for_export(scan_id, file_id, timeout: timeout, poll_interval: poll_interval)

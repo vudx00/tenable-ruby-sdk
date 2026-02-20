@@ -3,7 +3,7 @@
 require 'spec_helper'
 
 RSpec.describe Tenable::Models::Finding do
-  subject(:finding) { described_class.new(attributes) }
+  subject(:finding) { described_class.from_api(attributes) }
 
   context 'when initialized with all attributes' do
     let(:attributes) do
