@@ -10,6 +10,21 @@ module Tenable
     # @return [Configuration] the client configuration
     attr_reader :configuration
 
+    # @return [Resources::Vulnerabilities]
+    attr_reader :vulnerabilities
+
+    # @return [Resources::Exports]
+    attr_reader :exports
+
+    # @return [Resources::AssetExports]
+    attr_reader :asset_exports
+
+    # @return [Resources::Scans]
+    attr_reader :scans
+
+    # @return [Resources::WebAppScans]
+    attr_reader :web_app_scans
+
     # Creates a new Tenable API client.
     #
     # @param options [Hash] configuration options passed to {Configuration#initialize}
@@ -28,38 +43,15 @@ module Tenable
     #     secret_key: "your-secret-key",
     #     timeout: 60
     #   )
-    def initialize(**options)
-      @configuration = Configuration.new(**options)
-      @connection = Connection.new(@configuration)
+    def initialize(**)
+      @configuration = Configuration.new(**)
+      connection = Connection.new(@configuration)
+      @vulnerabilities = Resources::Vulnerabilities.new(connection)
+      @exports = Resources::Exports.new(connection)
+      @asset_exports = Resources::AssetExports.new(connection)
+      @scans = Resources::Scans.new(connection)
+      @web_app_scans = Resources::WebAppScans.new(connection)
       freeze
-    end
-
-    # Returns a vulnerabilities resource for querying vulnerability data.
-    #
-    # @return [Resources::Vulnerabilities]
-    def vulnerabilities
-      Resources::Vulnerabilities.new(@connection)
-    end
-
-    # Returns an exports resource for bulk data export operations.
-    #
-    # @return [Resources::Exports]
-    def exports
-      Resources::Exports.new(@connection)
-    end
-
-    # Returns a scans resource for managing vulnerability scans.
-    #
-    # @return [Resources::Scans]
-    def scans
-      Resources::Scans.new(@connection)
-    end
-
-    # Returns a web application scans resource.
-    #
-    # @return [Resources::WebAppScans]
-    def web_app_scans
-      Resources::WebAppScans.new(@connection)
     end
   end
 end
