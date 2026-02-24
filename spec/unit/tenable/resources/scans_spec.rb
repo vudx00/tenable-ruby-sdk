@@ -216,6 +216,53 @@ RSpec.describe Tenable::Resources::Scans do
       expect { resource.export_request(scan_id, format: 'xml') }
         .to raise_error(ArgumentError, /Unsupported format 'xml'/)
     end
+
+    it 'supports html format when chapters are provided' do
+      resource.export_request(scan_id, format: 'html', chapters: 'vuln_hosts_summary')
+
+      expect(WebMock).to have_requested(:post, "https://cloud.tenable.com/scans/#{scan_id}/export")
+        .with(body: hash_including('format' => 'html', 'chapters' => 'vuln_hosts_summary'))
+    end
+
+    it 'supports db format with required db parameters and history_id query' do
+      stub_request(:post, "https://cloud.tenable.com/scans/#{scan_id}/export?history_id=99")
+        .with(headers: { 'Content-Type' => 'application/json' })
+        .to_return(
+          status: 200,
+          body: JSON.generate(response_body),
+          headers: { 'Content-Type' => 'application/json' }
+        )
+
+      resource.export_request(scan_id, format: 'db', history_id: 99, asset_id: 'asset-123', password: 'secret')
+
+      expect(WebMock).to have_requested(:post, "https://cloud.tenable.com/scans/#{scan_id}/export?history_id=99")
+        .with(body: hash_including('format' => 'db', 'asset_id' => 'asset-123', 'password' => 'secret'))
+    end
+
+    it 'raises ArgumentError when chapters are missing for pdf format' do
+      expect { resource.export_request(scan_id, format: 'pdf') }
+        .to raise_error(ArgumentError, /chapters is required when format is 'pdf'/)
+    end
+
+    it 'raises ArgumentError when chapters are missing for html format' do
+      expect { resource.export_request(scan_id, format: 'html') }
+        .to raise_error(ArgumentError, /chapters is required when format is 'html'/)
+    end
+
+    it 'raises ArgumentError when history_id is missing for db format' do
+      expect { resource.export_request(scan_id, format: 'db', asset_id: 'asset-123', password: 'secret') }
+        .to raise_error(ArgumentError, /history_id is required when format is 'db'/)
+    end
+
+    it 'raises ArgumentError when asset_id is missing for db format' do
+      expect { resource.export_request(scan_id, format: 'db', history_id: 77, password: 'secret') }
+        .to raise_error(ArgumentError, /asset_id is required when format is 'db'/)
+    end
+
+    it 'raises ArgumentError when password is missing for db format' do
+      expect { resource.export_request(scan_id, format: 'db', history_id: 77, asset_id: 'asset-123') }
+        .to raise_error(ArgumentError, /password is required when format is 'db'/)
+    end
   end
 
   describe '#export_status' do
@@ -312,11 +359,12 @@ RSpec.describe Tenable::Resources::Scans do
     let(:scan_id) { 42 }
     let(:file_id) { 12_345 }
     let(:binary_content) { "\x25PDF-1.4 fake pdf content" }
+    let(:chapters) { 'vuln_hosts_summary' }
 
     before do
       stub_request(:post, "https://cloud.tenable.com/scans/#{scan_id}/export")
         .with(
-          body: JSON.generate(format: 'pdf'),
+          body: hash_including('format' => 'pdf', 'chapters' => chapters),
           headers: { 'Content-Type' => 'application/json' }
         )
         .to_return(
@@ -343,7 +391,7 @@ RSpec.describe Tenable::Resources::Scans do
     end
 
     it 'chains request, wait, and download to return binary content' do
-      result = resource.export(scan_id, format: 'pdf', timeout: 60, poll_interval: 0)
+      result = resource.export(scan_id, format: 'pdf', chapters: chapters, timeout: 60, poll_interval: 0)
 
       expect(result).to eq(binary_content)
     end
@@ -354,7 +402,14 @@ RSpec.describe Tenable::Resources::Scans do
       path = tmpfile.path
       tmpfile.close
 
-      result = resource.export(scan_id, format: 'pdf', save_path: path, timeout: 60, poll_interval: 0)
+      result = resource.export(
+        scan_id,
+        format: 'pdf',
+        chapters: chapters,
+        save_path: path,
+        timeout: 60,
+        poll_interval: 0
+      )
 
       expect(result).to eq(path)
       expect(File.binread(path)).to eq(binary_content)

@@ -18,7 +18,7 @@ RSpec.describe 'Scan export workflow', :integration do
       stub_request(:post, "#{base_url}/scans/#{scan_id}/export")
         .with(
           headers: { 'X-ApiKeys' => api_keys_header },
-          body: { 'format' => 'pdf' }.to_json
+          body: hash_including('format' => 'pdf', 'chapters' => 'vuln_hosts_summary')
         )
         .to_return(
           status: 200,
@@ -47,13 +47,19 @@ RSpec.describe 'Scan export workflow', :integration do
     it 'exports a scan report using the convenience method' do
       allow(client.scans).to receive(:sleep)
 
-      result = client.scans.export(scan_id, format: 'pdf', timeout: 60, poll_interval: 1)
+      result = client.scans.export(
+        scan_id,
+        format: 'pdf',
+        chapters: 'vuln_hosts_summary',
+        timeout: 60,
+        poll_interval: 1
+      )
 
       expect(result).to be_a(String)
       expect(result).to eq(binary_content)
 
       expect(WebMock).to have_requested(:post, "#{base_url}/scans/#{scan_id}/export")
-        .with(body: hash_including('format' => 'pdf'))
+        .with(body: hash_including('format' => 'pdf', 'chapters' => 'vuln_hosts_summary'))
       expect(WebMock).to have_requested(:get, "#{base_url}/scans/#{scan_id}/export/#{file_id}/status")
         .times(2)
       expect(WebMock).to have_requested(:get, "#{base_url}/scans/#{scan_id}/export/#{file_id}/download")
@@ -68,7 +74,14 @@ RSpec.describe 'Scan export workflow', :integration do
 
       allow(client.scans).to receive(:sleep)
 
-      result = client.scans.export(scan_id, format: 'pdf', save_path: path, timeout: 60, poll_interval: 1)
+      result = client.scans.export(
+        scan_id,
+        format: 'pdf',
+        chapters: 'vuln_hosts_summary',
+        save_path: path,
+        timeout: 60,
+        poll_interval: 1
+      )
 
       expect(result).to eq(path)
       expect(File.binread(path)).to eq(binary_content)
@@ -79,8 +92,8 @@ RSpec.describe 'Scan export workflow', :integration do
 
   describe 'export with unsupported format' do
     it 'raises ArgumentError without making any API calls' do
-      expect { client.scans.export_request(scan_id, format: 'html') }
-        .to raise_error(ArgumentError, /Unsupported format 'html'/)
+      expect { client.scans.export_request(scan_id, format: 'xml') }
+        .to raise_error(ArgumentError, /Unsupported format 'xml'/)
     end
   end
 end

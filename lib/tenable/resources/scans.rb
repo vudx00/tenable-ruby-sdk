@@ -1,11 +1,13 @@
 # frozen_string_literal: true
 
+require 'uri'
+
 module Tenable
   module Resources
     # Provides access to the Tenable.io scan management endpoints.
     class Scans < Base
       # Supported scan export formats.
-      SUPPORTED_EXPORT_FORMATS = %w[pdf csv nessus].freeze
+      SUPPORTED_EXPORT_FORMATS = %w[nessus html pdf csv db].freeze
 
       # @return [Integer] default seconds between export status polls
       DEFAULT_EXPORT_POLL_INTERVAL = 5
@@ -163,20 +165,21 @@ module Tenable
       # Initiates a scan report export.
       #
       # @param scan_id [Integer, String] the scan ID
-      # @param format [String] export format — one of "pdf", "csv", or "nessus"
+      # @param format [String, Symbol] export format — one of "nessus", "html", "pdf", "csv", or "db"
+      # @param history_id [Integer, nil] optional scan history ID query parameter; required for "db" exports
       # @param body [Hash] additional export parameters (e.g., +chapters+ for PDF)
       # @return [Hash] response containing the file ID under +"file"+ key
-      # @raise [ArgumentError] if the format is not supported
+      # @raise [ArgumentError] if required parameters are missing or format is not supported
       #
       # @example
       #   client.scans.export_request(123, format: 'pdf', chapters: 'vuln_hosts_summary')
-      def export_request(scan_id, format:, **body)
+      def export_request(scan_id, format:, history_id: nil, **body)
         validate_path_segment!(scan_id, name: 'scan_id')
-        unless SUPPORTED_EXPORT_FORMATS.include?(format)
-          raise ArgumentError, "Unsupported format '#{format}'. Must be one of: #{SUPPORTED_EXPORT_FORMATS.join(', ')}"
-        end
+        format = normalize_export_format(format)
+        validate_export_format!(format)
+        validate_export_request!(format, history_id: history_id, body: body)
 
-        post("/scans/#{scan_id}/export", body.merge(format: format))
+        post(export_request_path(scan_id, history_id), body.merge(format: format))
       end
 
       # Retrieves the status of a scan export.
@@ -222,7 +225,7 @@ module Tenable
       # Convenience method: requests an export, waits for completion, and downloads the result.
       #
       # @param scan_id [Integer, String] the scan ID
-      # @param format [String] export format — one of "pdf", "csv", or "nessus"
+      # @param format [String, Symbol] export format — one of "nessus", "html", "pdf", "csv", or "db"
       # @param save_path [String, nil] if provided, writes binary content to this file path.
       #   The caller is responsible for ensuring the path is safe and writable.
       #   This value is used as-is with +File.binwrite+ — no sanitization is performed.
@@ -250,6 +253,49 @@ module Tenable
         else
           content
         end
+      end
+
+      private
+
+      def normalize_export_format(format)
+        format.to_s
+      end
+
+      def validate_export_format!(format)
+        return if SUPPORTED_EXPORT_FORMATS.include?(format)
+
+        raise ArgumentError, "Unsupported format '#{format}'. Must be one of: #{SUPPORTED_EXPORT_FORMATS.join(', ')}"
+      end
+
+      def validate_export_request!(format, history_id:, body:)
+        validate_chapters_requirement!(format, body[:chapters])
+        validate_db_requirements!(format, history_id: history_id, body: body)
+      end
+
+      def validate_chapters_requirement!(format, chapters)
+        return unless %w[pdf html].include?(format)
+        return unless blank_value?(chapters)
+
+        raise ArgumentError, "chapters is required when format is '#{format}'"
+      end
+
+      def validate_db_requirements!(format, history_id:, body:)
+        return unless format == 'db'
+
+        raise ArgumentError, "history_id is required when format is 'db'" if history_id.nil?
+        raise ArgumentError, "asset_id is required when format is 'db'" if blank_value?(body[:asset_id])
+        raise ArgumentError, "password is required when format is 'db'" if blank_value?(body[:password])
+      end
+
+      def export_request_path(scan_id, history_id)
+        path = "/scans/#{scan_id}/export"
+        return path if history_id.nil?
+
+        "#{path}?#{URI.encode_www_form(history_id: history_id)}"
+      end
+
+      def blank_value?(value)
+        value.nil? || value.to_s.strip.empty?
       end
     end
   end
